@@ -12,12 +12,13 @@ Marca **Solventum**, con el mismo lenguaje de las piezas físicas del evento de 
 | Uso | Color |
 |---|---|
 | Verde brillante (Malachite) — acentos, botones, títulos | `#05DD4D` |
-| Verde oscuro (Deep Teal) — fondos | `#01332B` |
+| Fondo de pantalla | Negro `#000000` con radar HUD verde |
+| Verde oscuro (Deep Teal) — paneles | `#01332B` |
 | Blanco clínico — texto | `#F4F8F6` |
 | Gris frío — texto secundario | `#A7B8B2` |
 | Rojo — solo alarmas clínicas (signos vitales, errores) | `#FF5A52` |
 
-Tipografía: Montserrat (títulos en mayúsculas, instrucciones en itálica, como las tarjetas impresas), IBM Plex Mono para monitor y códigos, Special Elite para documentos en papel (historia clínica, reporte quirúrgico).
+Tipografía: Orbitron (títulos futuristas), Montserrat (textos; instrucciones en itálica, como las tarjetas impresas), IBM Plex Mono para monitor y códigos, Special Elite para documentos en papel (historia clínica, reporte quirúrgico).
 
 ## Probar
 
@@ -63,3 +64,5 @@ Las respuestas de los códigos no están escritas en claro en `contenido.js`: se
 - Prueba 1.1: la tarjeta original pide "4 acciones del ABC", pero las fichas físicas son indicaciones de abdomen abierto. El prototipo sigue las fichas.
 - Reporte de laparotomía: se retiraron las fechas (2005 / nacimiento 1988 no daban 38 años).
 - Mecánica 1.1 decía impacto izquierdo; se unificó a derecho.
+
+Las tipografías están alojadas en el propio sitio (carpeta `fonts/`, licencia SIL OFL): el juego no depende de Google Fonts ni del wifi del salón para verse bien.

@@ -8,7 +8,8 @@
   --teal: #01332b;               /* verde oscuro / deep teal */
   --teal-2: #024537;
   --teal-3: #035a47;
-  --noche: #00140f;              /* fondo profundo */
+  --noche: #000000;              /* fondos de pantalla: negro */
+  --negro-2: #030b09;
   --metal: #1d2426;              /* marcos tipo HUD de las piezas físicas */
   --metal-2: #2c3537;
   /* Neutros clínicos */
@@ -21,7 +22,7 @@
   --alarma: #ff5a52;
   --brillo: 0 0 18px rgba(5, 221, 77, .45);
   --sombra: 0 18px 40px rgba(0, 0, 0, .4);
-  --display: 'Montserrat', system-ui, sans-serif;
+  --display: 'Orbitron', 'Montserrat', system-ui, sans-serif;   /* títulos futuristas */
   --cuerpo: 'Montserrat', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --papel: 'Special Elite', 'Courier New', monospace;
@@ -31,13 +32,21 @@ html { background: var(--noche); }
 html, body { margin: 0; min-height: 100%; }
 body {
   background:
-    radial-gradient(1100px 700px at 50% 0%, rgba(3, 90, 71, .55), transparent 70%),
-    radial-gradient(900px 500px at 100% 100%, rgba(5, 221, 77, .07), transparent 60%),
-    linear-gradient(180deg, var(--teal) 0, var(--noche) 900px, var(--noche) 100%);
+    radial-gradient(900px 600px at 50% 40%, rgba(1, 51, 43, .45), transparent 70%),
+    var(--noche);
   color: var(--blanco);
   font: 400 17px/1.55 var(--cuerpo);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+/* radar HUD verde de fondo (gráfico propio) */
+body::after {
+  content: ''; position: fixed; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax;
+  pointer-events: none; z-index: 0; opacity: .16;
+  background: url('../img/radar.svg') center / contain no-repeat;
+  animation: girar 240s linear infinite;
+  mask-image: radial-gradient(circle, #000 25%, transparent 62%);
+  -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 62%);
 }
 /* trama de circuito sutil, como en las piezas impresas */
 body::before {
@@ -49,7 +58,7 @@ body::before {
   mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
 }
 #app { position: relative; z-index: 1; }
-h1, h2, h3, h4 { font-family: var(--display); font-weight: 800; margin: 0; line-height: 1.12; }
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 700; margin: 0; line-height: 1.18; letter-spacing: .03em; }
 p { margin: 0; }
 button { font: inherit; color: inherit; cursor: pointer; }
 input { font: inherit; }
@@ -71,7 +80,7 @@ input { font: inherit; }
 @keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(5, 221, 77, .5); } 70% { box-shadow: 0 0 0 18px rgba(5, 221, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(5, 221, 77, 0); } }
 
 /* ---------- marco HUD (como las tarjetas impresas) ---------- */
-.hud { position: relative; background: linear-gradient(180deg, rgba(3, 90, 71, .55), rgba(1, 51, 43, .85)); border: 1px solid var(--linea); border-radius: 4px;
+.hud { position: relative; background: linear-gradient(180deg, rgba(1, 51, 43, .78), rgba(2, 14, 11, .94)); border: 1px solid var(--linea); border-radius: 4px;
   clip-path: polygon(22px 0, calc(100% - 22px) 0, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0 calc(100% - 22px), 0 22px);
   box-shadow: inset 0 0 0 1px rgba(5, 221, 77, .08), inset 0 0 60px rgba(0, 0, 0, .35); }
 .hud::before, .hud::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 120px; height: 3px; border-radius: 2px; background: var(--malachite); box-shadow: var(--brillo); }
@@ -80,11 +89,11 @@ input { font: inherit; }
 
 /* ---------- barra superior ---------- */
 .pantalla { min-height: 100vh; display: flex; flex-direction: column; }
-.barra { display: flex; align-items: center; gap: 16px; padding: 12px 22px; border-bottom: 1px solid var(--linea); background: rgba(0, 20, 15, .82); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 5; }
+.barra { display: flex; align-items: center; gap: 16px; padding: 12px 22px; border-bottom: 1px solid var(--linea); background: rgba(0, 0, 0, .86); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 5; }
 .barra-marca { display: flex; align-items: center; gap: 14px; margin-right: auto; min-width: 0; }
 .barra-marca img { height: 26px; width: auto; display: block; }
 .barra-marca .divisor { width: 1px; height: 30px; background: var(--linea); }
-.barra-marca b { display: block; font: 800 14px/1.1 var(--display); letter-spacing: .12em; }
+.barra-marca b { display: block; font: 700 13px/1.2 var(--display); letter-spacing: .14em; }
 .barra-marca small { display: block; color: var(--malachite); font: 600 11px var(--display); letter-spacing: .14em; text-transform: uppercase; }
 .barra-equipo { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--linea); background: rgba(5, 221, 77, .06); font-weight: 700; font-size: 14px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .barra-equipo span { width: 10px; height: 10px; border-radius: 50%; background: var(--g); flex: none; }
@@ -105,7 +114,7 @@ input { font: inherit; }
 @keyframes girar { to { transform: rotate(360deg); } }
 .portal-caja { position: relative; width: min(660px, 100%); padding: 42px 36px 38px; text-align: center; }
 .portal-logo { height: 40px; margin: 0 auto 26px; display: block; }
-.portal-caja h1 { font-size: clamp(32px, 6vw, 54px); letter-spacing: .04em; color: var(--blanco); text-transform: uppercase; }
+.portal-caja h1 { font-size: clamp(28px, 5.4vw, 50px); font-weight: 900; letter-spacing: .06em; color: var(--blanco); text-transform: uppercase; text-shadow: 0 0 28px rgba(5, 221, 77, .35); }
 .codigo-juego { font: 700 15px var(--display); color: var(--malachite); letter-spacing: .24em; text-transform: uppercase; margin: 10px 0 30px; }
 .campo { display: block; text-align: left; margin-bottom: 20px; }
 .campo > span { display: block; font: 700 12px var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--malachite); margin-bottom: 8px; }
@@ -144,8 +153,8 @@ input { font: inherit; }
 .linea { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; position: relative; }
 .linea::before { content: ''; position: absolute; left: 4%; right: 4%; top: 46px; height: 2px; background: repeating-linear-gradient(90deg, var(--malachite) 0 8px, transparent 8px 14px); opacity: .45; }
 .nodo button { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 0 8px 20px; background: none; border: 0; position: relative; }
-.nodo-num { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font: 800 34px var(--display); background: var(--noche); border: 2px solid var(--metal-2); color: var(--gris-2); position: relative; z-index: 1; }
-.nodo-nombre { font: 800 16px/1.2 var(--display); margin-top: 6px; text-transform: uppercase; letter-spacing: .02em; }
+.nodo-num { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font: 700 32px var(--display); background: var(--noche); border: 2px solid var(--metal-2); color: var(--gris-2); position: relative; z-index: 1; }
+.nodo-nombre { font: 700 14px/1.3 var(--display); margin-top: 6px; text-transform: uppercase; letter-spacing: .02em; }
 .nodo-sub { color: var(--gris); font-size: 14px; font-style: italic; }
 .nodo-estado { font: 800 12px var(--display); letter-spacing: .12em; text-transform: uppercase; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--linea-suave); color: var(--gris); margin-top: 4px; }
 .nodo.disponible .nodo-num { border-color: var(--malachite); color: var(--malachite); background: var(--teal); box-shadow: 0 0 0 8px rgba(5, 221, 77, .1), 0 0 40px rgba(5, 221, 77, .45); animation: pulso 2s ease-in-out infinite; }
@@ -171,7 +180,7 @@ input { font: inherit; }
 
 /* ---------- cámara: tres columnas ---------- */
 .camara { flex: 1; display: grid; grid-template-columns: 250px minmax(0, 1fr) 320px; }
-.col-ruta { border-right: 1px solid var(--linea); padding: 24px 18px; background: rgba(0, 20, 15, .55); }
+.col-ruta { border-right: 1px solid var(--linea); padding: 24px 18px; background: rgba(0, 0, 0, .6); }
 .col-ruta h3 { font-size: 17px; margin-bottom: 18px; text-transform: uppercase; }
 .ruta { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .ruta li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--gris); font-size: 14px; }
@@ -251,7 +260,7 @@ input { font: inherit; }
 .candado.abierto i { transform: translateY(-8px) rotate(-28deg); }
 
 /* panel del guía */
-.col-guia { border-left: 1px solid var(--linea); padding: 24px 20px; background: rgba(0, 20, 15, .55); display: flex; flex-direction: column; gap: 16px; }
+.col-guia { border-left: 1px solid var(--linea); padding: 24px 20px; background: rgba(0, 0, 0, .6); display: flex; flex-direction: column; gap: 16px; }
 .guia-texto { font-size: 17px; line-height: 1.55; padding: 16px; border-radius: 8px; background: rgba(1, 51, 43, .85); border: 1px solid var(--linea); font-style: italic; }
 .guia-alerta { color: var(--alarma); font-size: 15px; font-weight: 600; }
 .pistas { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
