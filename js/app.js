@@ -93,8 +93,8 @@
     const g = grupo();
     const a = S.actual;
     return '<header class="barra">'
-      + '<div class="barra-marca"><span class="engranaje" aria-hidden="true"></span><div><b>' + esc(J.titulo) + '</b><small>' + esc(J.subtitulo) + '</small></div></div>'
-      + (S.equipo ? '<div class="barra-equipo" style="--g:' + g.color + '"><span>' + g.simbolo + '</span>' + esc(S.equipo) + '</div>' : '')
+      + '<div class="barra-marca"><img src="img/solventum-logo.png" alt="Solventum"><span class="divisor"></span><div><b>' + esc(J.titulo) + '</b><small>' + esc(J.subtitulo) + '</small></div></div>'
+      + (S.equipo ? '<div class="barra-equipo" style="--g:' + g.color + '"><span></span>' + esc(S.equipo) + '</div>' : '')
       + (opc && opc.reloj && a ? '<div class="reloj" id="reloj">' + mmss(restante()) + '</div>' : '')
       + (opc && opc.puntos ? '<div class="barra-puntos"><small>PUNTOS</small><b>' + totalPuntos() + '</b></div>' : '')
       + '<button class="btn-icono" data-a="voz" aria-label="Activar o silenciar sonido">' + (S.voz ? 'SONIDO ON' : 'SONIDO OFF') + '</button>'
@@ -120,7 +120,7 @@
       + '<span class="grupo-simbolo">' + g.simbolo + '</span><span>' + esc(g.nombre) + '</span></button>').join('');
     pinta('<main class="portal">'
       + '<div class="portal-anillo" aria-hidden="true"><i></i><i></i><i></i></div>'
-      + '<section class="portal-caja">'
+      + '<section class="portal-caja hud">' + '<img class="portal-logo" src="img/solventum-logo.png" alt="Solventum">'
       + '<p class="sobretitulo">Laboratorio quirúrgico de alta inmersión</p>'
       + '<h1>' + esc(J.titulo) + '</h1>'
       + '<p class="codigo-juego">' + esc(J.subtitulo) + '</p>'
@@ -224,20 +224,20 @@
 
   function cuerpoPaso(e, paso) {
     if (paso.tipo === 'accion') {
-      return '<div class="panel accion"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
+      return '<div class="panel hud accion"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
         + '<div class="mesa-indicador"><span class="mesa-icono" aria-hidden="true"></span>Esta acción se realiza en la mesa física</div>'
         + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'HECHO') + ' →</button></div></div>';
     }
     if (paso.tipo === 'revelacion') {
       const d = paso.documento;
-      return '<div class="panel"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
+      return '<div class="panel hud"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
         + '<article class="documento"><header><b>' + esc(d.titulo) + '</b><small>' + esc(d.encabezado) + '</small></header><dl>'
         + d.lineas.map(l => '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>').join('') + '</dl></article>'
         + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'CONTINUAR') + ' →</button></div></div>';
     }
     if (paso.tipo === 'solicitud') {
       const visto = !!S.actual.revelados[paso.id];
-      return '<div class="panel"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
+      return '<div class="panel hud"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
         + (visto ? monitorHTML(paso.revela) + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'CONTINUAR') + ' →</button></div>'
           : '<div class="acciones centro"><button class="btn solicitud" data-a="solicitar">' + esc(paso.botonSolicitud) + '</button></div>')
         + '</div>';
@@ -266,7 +266,7 @@
           + (st.intentos >= J.intentosPorCodigo ? '<div class="liberar"><p>Agotaron los intentos con puntos. Pueden seguir intentando o pedir al Guía que libere el código para no detener la misión.</p><button type="button" class="btn fantasma" data-a="liberar">LIBERAR CÓDIGO (0 PUNTOS)</button></div>' : '')
           + '</form>';
       }
-      return '<div class="panel codigo ' + (paso.salida ? 'salida' : '') + '"><h2>' + esc(paso.titulo) + '</h2><p class="pregunta">' + esc(paso.pregunta) + '</p>' + cuerpo + '</div>';
+      return '<div class="panel hud codigo ' + (paso.salida ? 'salida' : '') + '"><h2>' + esc(paso.titulo) + '</h2><p class="pregunta">' + esc(paso.pregunta) + '</p>' + cuerpo + '</div>';
     }
     return '';
   }
@@ -387,13 +387,13 @@
       + '<main class="cierre">'
       + '<section class="cierre-cab"><p class="sobretitulo">Cámara ' + e.numero + ' superada</p><h2>' + esc(c.mensaje) + '</h2><p>' + esc(c.detalle) + '</p></section>'
       + '<div class="cierre-grid">'
-      + '<section class="marcador"><div class="marcador-total"><b>' + r.total + '</b><span>/ 20</span></div>'
+      + '<section class="marcador hud"><div class="marcador-total"><b>' + r.total + '</b><span>/ 20</span></div>'
       + '<table><tbody>'
       + r.detalle.map(d => '<tr><td>Código ' + esc(d.codigo) + (d.liberado ? ' <em>liberado</em>' : '') + '</td><td>' + d.puntos + ' / ' + d.max + '</td></tr>').join('')
       + '<tr><td>Tiempo ' + mmss(r.usados) + ' · ' + esc(r.bono.etiqueta) + '</td><td>+' + r.bono.puntos + '</td></tr>'
       + (r.penal ? '<tr><td>Pistas directas usadas (' + r.directas + ')</td><td>−' + r.penal + '</td></tr>' : '')
       + '</tbody></table></section>'
-      + '<section class="debrief">' + guardian('Guía Especialista')
+      + '<section class="debrief hud">' + guardian('Guía Especialista')
       + '<blockquote>' + esc(c.especialista) + '</blockquote>'
       + '<h4>Lo que se llevan de esta cámara</h4><ul>' + c.aprendizajes.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
       + '<p class="linea-vida">' + esc(c.lineaVida) + '</p>'

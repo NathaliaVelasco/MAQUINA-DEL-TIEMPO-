@@ -5,6 +5,20 @@ Las cajas, candados, fichas y cubos son físicos. Esta plataforma asume el rol d
 
 **Metodología, diseño del juego y piezas físicas:** Nathalia Velasco · Simoné. Todos los derechos reservados.
 
+## Identidad visual
+
+Marca **Solventum**, con el mismo lenguaje de las piezas físicas del evento de Cartagena (marcos tipo HUD, trama de circuito, brillo verde):
+
+| Uso | Color |
+|---|---|
+| Verde brillante (Malachite) — acentos, botones, títulos | `#05DD4D` |
+| Verde oscuro (Deep Teal) — fondos | `#01332B` |
+| Blanco clínico — texto | `#F4F8F6` |
+| Gris frío — texto secundario | `#A7B8B2` |
+| Rojo — solo alarmas clínicas (signos vitales, errores) | `#FF5A52` |
+
+Tipografía: Montserrat (títulos en mayúsculas, instrucciones en itálica, como las tarjetas impresas), IBM Plex Mono para monitor y códigos, Special Elite para documentos en papel (historia clínica, reporte quirúrgico).
+
 ## Probar
 
 Enlace de prueba (GitHub Pages): https://nathaliavelasco.github.io/maquina-del-tiempo-/
