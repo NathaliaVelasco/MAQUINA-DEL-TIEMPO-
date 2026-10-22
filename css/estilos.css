@@ -361,3 +361,20 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
   .cabecera .btn-sonido { padding: 6px 7px; font-size: 9px; }
   .reloj { font-size: 22px; min-width: 84px; padding: 5px 8px; }
 }
+
+/* ---------- panel del facilitador ---------- */
+.pagina.ancha { max-width: 1100px; }
+.aviso-admin { padding: 12px 14px; border-radius: 10px; border: 1px solid currentColor; margin-bottom: 14px; }
+.clave-grande { font: 700 clamp(30px, 8vw, 56px)/1.1 var(--mono); letter-spacing: .12em; color: var(--malachite); text-shadow: 0 0 18px rgba(5, 221, 77, .5); margin: 10px 0 8px; word-break: break-all; }
+.qrs-admin { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.qrs-admin .qr { gap: 14px; padding: 14px; }
+.qrs-admin .qr svg { width: 120px; flex: none; }
+.qrs-admin .qr b { font-size: 14px; }
+.qrs-admin .qr span { display: block; font-size: 13px; margin: 2px 0 8px; }
+.grupos-admin { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.grupo-admin { border-left: 3px solid var(--g); }
+.grupo-admin-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: var(--display); }
+.grupo-admin-cab .total { white-space: nowrap; font: 700 22px var(--mono); color: var(--malachite); }
+.grupo-admin .mini-linea div { padding: 6px 0; font-size: 14px; }
+.fila-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.fila-form .entrada { flex: 1; min-width: 180px; }

@@ -1,4 +1,4 @@
-/* Página de inicio: acceso a las tres pantallas del ecosistema. */
+/* Página de inicio: acceso a las pantallas del ecosistema. */
 (function () {
   'use strict';
   const M = window.MDT, J = M.C.juego;
@@ -11,6 +11,7 @@
     + '<a href="kit.html"><div class="hud"><b>Kit de tripulación</b><span>Cada participante, en su celular: registrarse y unirse a su grupo.</span></div></a>'
     + '<a href="consola.html"><div class="hud"><b>Consola del equipo</b><span>Comandante de Misión: bienvenida, 5 estaciones y códigos.</span></div></a>'
     + '<a href="portico.html"><div class="hud"><b>Pórtico</b><span>Pantalla grande: resultados de los 4 grupos en vivo.</span></div></a>'
+    + '<a href="facilitador.html"><div class="hud"><b>Facilitador</b><span>Administrador del juego (con PIN): códigos de acceso, QR, grupos, nueva sesión y resultados.</span></div></a>'
     + '</nav>'
     + '<p class="suave centro" style="margin-top:24px;font-size:13px">Metodología y diseño del juego: Nathalia Velasco · Simoné</p>'
     + '</main>';

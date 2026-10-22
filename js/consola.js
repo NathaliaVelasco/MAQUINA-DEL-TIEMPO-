@@ -9,6 +9,7 @@
   const params = new URLSearchParams(location.search);
   let cfg = M.leer('consola', {});
   if (params.get('grupo')) cfg.grupo = params.get('grupo');
+  if (params.get('c')) cfg.codigo = params.get('c').toUpperCase();
   if (!cfg.codigo) cfg.codigo = M.leer('codigo', '');
   let E = null;                  // estado del equipo que devuelve el servidor
   let pantalla = 'acceso', vista = { est: null, tab: 0 };

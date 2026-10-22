@@ -11,7 +11,8 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Inicio | `index.html` | Acceso a todo |
 | Kit de tripulación | `kit.html` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
 | Consola del equipo | `consola.html` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
-| Pórtico | `portico.html` | Pantalla grande: resultados de los 4 grupos en vivo, QR de ingreso y panel del facilitador (PIN) |
+| Pórtico | `portico.html` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
+| Panel del facilitador | `facilitador.html` | Administrador del juego (con PIN): genera el código de acceso, QR con el código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, descarga CSV y cambio de PIN |
 
 ## Reglas implementadas (las controla el servidor)
 

@@ -388,6 +388,27 @@ begin
     insert into mdt.sesiones default values returning id into v_id;
     update mdt.config set sesion = v_id where id = 1;
     return json_build_object('ok', true, 'sesion', v_id);
+  elsif p_accion = 'cambiar_pin' then
+    if length(trim(coalesce(p_dato, ''))) < 4 then raise exception 'El PIN debe tener al menos 4 caracteres.'; end if;
+    update mdt.config set pin = trim(p_dato) where id = 1;
+    return json_build_object('ok', true);
+  elsif p_accion = 'panel' then
+    perform mdt.vencer();
+    return json_build_object('ahora', now(), 'sesion', mdt.sesion(),
+      'codigo_acceso', (select codigo_acceso from mdt.config where id = 1),
+      'grupos', (select json_agg(json_build_object(
+        'grupo', g.grupo,
+        'registrado', e.id is not null,
+        'tripulantes', coalesce((select json_agg(json_build_object('nombre', t.nombre, 'profesion', t.profesion, 'rol', t.rol) order by t.creado)
+                                   from mdt.tripulantes t where t.equipo = e.id), '[]'::json),
+        'total', coalesce((select sum(total) from mdt.avance where equipo = e.id), 0),
+        'estaciones', coalesce((select json_object_agg(a.estacion, json_build_object('estado', a.estado, 'total', a.total, 'segundos', a.seg_usados))
+                                 from mdt.avance a where a.equipo = e.id), '{}'::json),
+        'actual', (select json_build_object('estacion', a.estacion, 'inicio', a.inicio, 'limite', s.limite_seg, 'gracia', s.gracia_seg)
+                     from mdt.avance a join mdt.estaciones s on s.id = a.estacion
+                    where a.equipo = e.id and a.estado = 'abierta' limit 1)))
+        from (values ('davinci'), ('verne'), ('wells'), ('tesla')) g(grupo)
+        left join mdt.equipos e on e.grupo = g.grupo and e.sesion = mdt.sesion()));
   elsif p_accion = 'cambiar_codigo' then
     if length(trim(coalesce(p_dato, ''))) < 4 then raise exception 'El código debe tener al menos 4 caracteres.'; end if;
     update mdt.config set codigo_acceso = upper(trim(p_dato)) where id = 1;
@@ -399,6 +420,11 @@ begin
   elsif p_accion = 'borrar_grupo' then
     delete from mdt.equipos where sesion = mdt.sesion() and grupo = p_dato;
     return json_build_object('ok', true);
+  elsif p_accion = 'claves' then
+    -- Hoja de claves para el Guía Especialista (solo con PIN).
+    return json_build_object('claves', coalesce((select json_agg(json_build_object(
+        'codigo', c.id, 'estacion', c.estacion, 'puntos', c.puntos, 'respuesta', c.mostrar) order by c.estacion, c.orden)
+      from mdt.codigos c), '[]'::json));
   elsif p_accion = 'exportar' then
     return json_build_object('filas', coalesce((select json_agg(json_build_object(
         'sesion', e.sesion, 'grupo', e.grupo, 'nombre', t.nombre, 'profesion', t.profesion, 'rol', t.rol,
