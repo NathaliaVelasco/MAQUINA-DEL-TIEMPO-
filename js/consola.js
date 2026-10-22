@@ -1,114 +1,450 @@
 /* ==========================================================================
-   MÁQUINA DEL TIEMPO · Consola de resultados en vivo (pantalla grande)
+   CONSOLA DEL EQUIPO · celular del Comandante de Misión
+   Bienvenida del Guardián → Estaciones 1 a 5 en orden → cierre final.
+   El reloj, los intentos y los puntos los controla el servidor.
    ========================================================================== */
 (function () {
   'use strict';
-  const C = window.CONTENIDO, J = C.juego, D = window.DATOS;
-  const app = document.getElementById('consola');
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const mmss = seg => { const n = Math.max(0, Math.ceil(seg)); return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); };
-  let GRUPOS = {}, GENTE = [], OFFSET = 0, ERROR = '';
-  const ahora = () => Date.now() + OFFSET;
+  const M = window.MDT, C = M.C, J = C.juego, app = document.getElementById('app');
+  const params = new URLSearchParams(location.search);
+  let cfg = M.leer('consola', {});
+  if (params.get('grupo')) cfg.grupo = params.get('grupo');
+  if (!cfg.codigo) cfg.codigo = M.leer('codigo', '');
+  let E = null;                  // estado del equipo que devuelve el servidor
+  let pantalla = 'acceso', vista = { est: null, tab: 0 };
+  let local = M.leer('consola-local', {});   // monitor revelado, marcas en pantalla, cierres vistos
+  let tick = null, sondeo = null, confirmarFin = 0, ocupada = '';
 
-  function totalDe(est) {
-    const res = (est && est.res) || {};
-    return Object.values(res).reduce((n, r) => n + (r.total || 0), 0);
+  const guardarCfg = () => M.guardar('consola', cfg);
+  const guardarLocal = () => M.guardar('consola-local', local);
+  const clave = k => (cfg.grupo || '') + ':' + k;
+  const est = id => E && E.estaciones.find(x => x.id === id);
+  const contenido = id => M.estacion(id);
+  function pinta(html) { app.innerHTML = html; }
+
+  /* ------------------------------------------------------------- cabecera */
+  function cab(sub, conReloj) {
+    const g = M.grupo(cfg.grupo);
+    return '<header class="cabecera' + (conReloj ? ' con-reloj' : '') + '">' + M.logo()
+      + '<div class="titulo-cab"><b>' + M.esc(sub || J.titulo) + '</b><small style="color:' + g.color + '">' + M.esc(g.nombre || 'Consola del equipo') + '</small></div>'
+      + (conReloj ? '<div class="reloj" id="reloj">--:--</div>' : '')
+      + '<button class="btn-sonido" data-a="voz" aria-label="Ajustes de voz">VOZ</button>'
+      + '<button class="btn-sonido" data-a="sonido">' + (M.sonido ? 'SONIDO ON' : 'SONIDO OFF') + '</button>'
+      + '</header>';
   }
-  function estadoTexto(est) {
-    const f = (est && est.fase) || 'portico', e = C.estaciones[(est && est.est) || 0];
-    if (f === 'portico') return { t: 'Pórtico de ingreso', reloj: '' };
-    if (f === 'antesala') return { t: 'Preparando E' + e.numero, reloj: '' };
-    if (f === 'juego') {
-      const t = est.inicio ? (ahora() - est.inicio) / 1000 : 0;
-      const reloj = t <= J.minutos * 60 ? mmss(J.minutos * 60 - t) : (t < J.segundosCierre ? '+' + mmss(J.segundosCierre - t) : 'CERRADA');
-      return { t: 'Jugando E' + e.numero + ' · ' + e.nombre, reloj: reloj, alerta: t > J.minutos * 60 };
+  function guardian(txt) { return '<div class="guardian"><div class="guardian-reloj"><i class="h"></i><i class="m"></i></div><span>' + M.esc(txt) + '</span></div>'; }
+
+  /* ---------------------------------------------------------- servidor */
+  async function refrescar() {
+    E = await M.rpc('mdt_consola', { p_codigo: cfg.codigo, p_grupo: cfg.grupo });
+    M.sincronizar(E.ahora);
+    return E;
+  }
+  function decidirPantalla() {
+    const abierta = E.estaciones.find(x => x.estado === 'abierta');
+    if (abierta) { if (vista.est !== abierta.id) vista = { est: abierta.id, tab: 0 }; return 'estacion'; }
+    const sinCierre = E.estaciones.find(x => (x.estado === 'cerrada' || x.estado === 'agotada') && !(local[clave('cierre-' + x.id)]));
+    if (sinCierre) { vista.est = sinCierre.id; return 'cierre'; }
+    if (E.estaciones.every(x => x.estado !== 'pendiente')) return 'final';
+    if (!local[clave('bienvenida')] && E.estaciones.every(x => x.estado === 'pendiente')) return 'bienvenida';
+    return 'linea';
+  }
+  async function cargar() {
+    try { await refrescar(); pantalla = decidirPantalla(); render(); }
+    catch (e) {
+      if (/acceso incorrecto|tripulación registrada/i.test(e.message)) { pantalla = 'acceso'; return pAcceso(M.mensajeError(e)); }
+      pinta(cab() + '<main class="pagina"><section class="hud"><p class="error">' + M.esc(M.mensajeError(e)) + '</p><div class="acciones"><button class="btn primario" data-a="reintentar">REINTENTAR</button></div></section></main>');
     }
-    if (f === 'retro') return { t: 'Retroalimentación E' + e.numero, reloj: '' };
-    if (f === 'fin') return { t: 'Misión cumplida', reloj: '' };
-    return { t: '', reloj: '' };
   }
 
-  function pinta() {
-    const activos = J.grupos.filter(g => GENTE.some(p => p.grupo === g.id));
-    const lista = (activos.length ? activos : J.grupos).map(g => ({ g: g, est: GRUPOS[g.id] || {}, total: totalDe(GRUPOS[g.id]) }))
-      .sort((a, b) => b.total - a.total);
-    const todosFin = activos.length > 0 && activos.every(g => (GRUPOS[g.id] || {}).fase === 'fin');
-    const lider = lista[0];
-    let h = '<header class="consola-cab"><img src="img/solventum-logo.png" alt="Solventum"><div><h1>' + esc(J.titulo) + '</h1><p>' + esc(J.subtitulo) + ' · Resultados en vivo</p></div>'
-      + (D.modo === 'demo' ? '<span class="modo-demo">MODO DEMO</span>' : '') + '</header>';
-    if (ERROR) h += '<p class="consola-error">' + esc(ERROR) + '</p>';
-    if (todosFin && lider) {
-      h += '<section class="ganador" style="--g:' + lider.g.color + '"><p class="sobretitulo">Grupo ganador</p><h2>' + lider.g.simbolo + ' ' + esc(lider.g.nombre) + '</h2><b>' + lider.total + ' <small>/ 100</small></b></section>';
+  function render() {
+    clearInterval(tick); tick = null; window.scrollTo(0, 0);
+    if (pantalla === 'acceso') return pAcceso();
+    if (pantalla === 'bienvenida') return pBienvenida();
+    if (pantalla === 'linea') return pLinea();
+    if (pantalla === 'estacion') return pEstacion();
+    if (pantalla === 'cierre') return pCierre();
+    if (pantalla === 'final') return pFinal();
+  }
+
+  /* ----------------------------------------------------------- 1. acceso */
+  function pAcceso(err) {
+    const opGrupos = J.grupos.map(g => '<button type="button" class="opcion ' + (cfg.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '"><span class="simbolo">' + g.simbolo + '</span><span>' + M.esc(g.nombre) + '</span></button>').join('');
+    pinta(cab('Consola del equipo') + '<main class="pagina"><section class="hud">' + M.logo('logo-portal')
+      + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Consola del equipo</p>'
+      + '<p class="suave centro" style="margin-bottom:18px">Solo el Comandante de Misión (Custodio Digital) usa esta consola.</p>'
+      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(cfg.codigo || '') + '" placeholder="El que les entregó el facilitador"></label>'
+      + '<div class="campo"><span>Su grupo</span><div class="opciones">' + opGrupos + '</div></div>'
+      + '<p class="error">' + M.esc(err || '') + '</p>'
+      + '<button class="btn primario ancho grande" type="submit">ACCEDER A LA CONSOLA →</button></form>'
+      + '</section></main>');
+    app.querySelectorAll('[data-grupo]').forEach(b => b.onclick = () => { cfg.codigo = document.getElementById('cod').value; cfg.grupo = b.dataset.grupo; pAcceso(err); });
+    document.getElementById('f').onsubmit = ev => {
+      ev.preventDefault();
+      cfg.codigo = document.getElementById('cod').value.trim();
+      if (!cfg.codigo) return pAcceso('Escriban el código de acceso.');
+      if (!cfg.grupo) return pAcceso('Elijan su grupo.');
+      M.audio(); M.decir('Acceso concedido.');   // primer gesto: habilita audio y voz en el celular
+      guardarCfg(); cargar();
+    };
+  }
+
+  /* ----------------------------------------------------- 2. bienvenida */
+  function pBienvenida() {
+    const g = M.grupo(cfg.grupo), t = E.tripulantes || [];
+    let lista = t.map(x => '<li><span>' + M.esc(x.nombre) + '</span><span>' + M.esc(M.rol(x.rol).nombre) + '</span></li>').join('');
+    for (let i = t.length; i < 7; i++) lista += '<li class="vacio"><span>Esperando tripulante…</span><span></span></li>';
+    pinta(cab('Pórtico de ingreso') + '<main class="pagina">'
+      + '<section class="hud" id="guardian">' + guardian('El Guardián de la Línea del Tiempo')
+      + J.bienvenida.map(p => '<p class="texto-guardian">' + M.esc(p) + '</p>').join('')
+      + '<div class="acciones"><button class="btn contorno" data-a="escucharBienvenida">▶ ESCUCHAR AL GUARDIÁN</button></div></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">Reglas del laberinto</p><ul class="lista-tripulacion">' + J.reglas.map(r => '<li><span>' + M.esc(r) + '</span></li>').join('') + '</ul></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + ' (' + t.length + '/7)</p><ul class="lista-tripulacion">' + lista + '</ul>'
+      + '<p class="suave" style="font-size:13px;margin-top:10px">Los integrantes se registran desde el Kit de tripulación en su propio celular.</p>'
+      + '<div class="acciones"><button class="btn fantasma pequeno" data-a="actualizar">Actualizar tripulación</button></div></section>'
+      + '<section class="bloque centro"><p class="texto-guardian" style="color:var(--malachite)">' + M.esc(J.portal) + '</p>'
+      + '<div class="acciones"><button class="btn primario grande ancho" data-a="cruzar">CRUZAR EL PORTAL →</button></div></section>'
+      + '</main>');
+    hablarBienvenida();
+  }
+  function hablarBienvenida() {
+    const caja = document.getElementById('guardian'); if (caja) caja.classList.add('hablando');
+    M.decir(J.bienvenida.join(' ') + ' ' + J.portal, () => { const c = document.getElementById('guardian'); if (c) c.classList.remove('hablando'); });
+  }
+
+  /* ------------------------------------------------ 3. línea de vida */
+  function pLinea(msg) {
+    const sig = E.estaciones.find(x => x.estado === 'pendiente');
+    const nodos = E.estaciones.map(x => {
+      const c = contenido(x.id), clase = x.estado === 'pendiente' ? (sig && sig.id === x.id ? 'actual' : '') : x.estado;
+      const pts = x.estado === 'cerrada' ? x.total + ' pts' : x.estado === 'agotada' ? '0 pts' : '';
+      return '<li class="nodo ' + clase + '"><span class="nodo-num">' + x.numero + '</span><span class="nodo-info"><b>' + M.esc(c.nombre) + '</b><small>'
+        + M.esc(x.estado === 'agotada' ? 'Cerrada por tiempo' : x.estado === 'cerrada' ? 'Nodo restaurado' : c.subtitulo) + '</small></span><span class="nodo-pts">' + pts + '</span></li>';
+    }).join('');
+    const cs = sig && contenido(sig.id);
+    pinta(cab('Línea de vida') + '<main class="pagina">'
+      + '<p class="sobretitulo">El laberinto temporal</p><h2 class="seccion">Línea de vida del paciente</h2>'
+      + '<p class="suave" style="margin-bottom:16px">Cinco estaciones en orden. Doce minutos en cada una. Puntos acumulados: <b style="color:var(--malachite)">' + E.total + '</b></p>'
+      + '<ol class="linea-vida">' + nodos + '</ol>'
+      + (cs ? '<section class="hud bloque" style="margin-top:20px"><p class="sobretitulo">Siguiente · Estación ' + sig.numero + '</p><h2 class="seccion">' + M.esc(cs.nombre) + '</h2>'
+              + '<p class="suave">' + M.esc(cs.subtitulo) + ' · ' + M.esc(cs.lugar) + '</p>'
+              + '<p style="margin-top:10px;font-size:14px">Cuando el Guía Especialista tenga lista la estación en la maleta, inicien. Al iniciar empiezan a correr los 12 minutos.</p>'
+              + '<p class="error">' + M.esc(msg || '') + '</p>'
+              + '<button class="btn primario grande ancho" data-a="abrir" data-est="' + sig.id + '">INICIAR ESTACIÓN ' + sig.numero + ' · 12:00</button></section>' : '')
+      + '</main>');
+  }
+  async function abrir(id) {
+    try {
+      E = await M.rpc('mdt_abrir', { p_codigo: cfg.codigo, p_grupo: cfg.grupo, p_estacion: id });
+      M.sincronizar(E.ahora); vista = { est: id, tab: 0 }; pantalla = 'estacion'; M.SFX.portal(); render();
+      const c = contenido(id);
+      M.decir('Estación ' + c.numero + ': ' + c.nombre + '. ' + c.narrativa);
+    } catch (e) {
+      const m = e.message || '';
+      if (/^OCUPADA:/.test(m)) {
+        const otro = M.grupo(m.split(':')[1]).nombre;
+        return pLinea('La estación está ocupada por ' + otro + '. Esperen a que terminen y vuelvan a intentarlo.');
+      }
+      pLinea(M.mensajeError(e));
     }
-    const urlJuego = location.href.replace(/consola\.html.*$/, '').replace(/[?#].*$/, '');
-    h += '<section class="qr-ingreso hud"><div class="qr" aria-label="Código QR para ingresar">' + qrSVG(urlJuego) + '</div><div><p class="sobretitulo">Ingreso de los Cronocirujanos</p><h2>Escaneen con su celular</h2><p class="qr-url">' + esc(urlJuego.replace(/^https?:\/\//, '')) + '</p><p class="nota">' + GENTE.length + ' de 28 tripulantes registrados</p></div></section>';
-    h += '<section class="tabla-consola"><div class="fila cab"><span>#</span><span>Grupo</span>' + C.estaciones.map(e => '<span>E' + e.numero + '</span>').join('') + '<span>Total</span></div>';
-    lista.forEach((x, k) => {
-      const st = estadoTexto(x.est), res = x.est.res || {};
-      const n = GENTE.filter(p => p.grupo === x.g.id).length;
-      h += '<div class="fila" style="--g:' + x.g.color + '"><span class="pos">' + (k + 1) + '</span>'
-        + '<span class="nombre"><b><i></i>' + esc(x.g.nombre) + '</b><small>' + n + '/7 tripulantes · ' + esc(st.t) + (st.reloj ? ' · <em class="' + (st.alerta ? 'alerta' : '') + '">' + st.reloj + '</em>' : '') + '</small></span>'
-        + C.estaciones.map(e => { const r = res[e.id]; return '<span class="celda ' + (r ? (r.por === 'reloj' ? 'cero' : 'ok') : '') + '">' + (r ? r.total : '—') + '</span>'; }).join('')
-        + '<span class="total">' + x.total + '</span></div>';
-    });
-    h += '</section>';
-    h += '<footer class="consola-pie"><details><summary>Panel del facilitador</summary>'
-      + '<div class="panel-fac"><button class="btn fantasma" data-c="csv">Descargar participantes y resultados (CSV)</button>'
-      + '<label>PIN <input id="pin" type="password" inputmode="numeric" maxlength="12" autocomplete="off"></label>'
-      + '<button class="btn fantasma peligro" data-c="reiniciar">Reiniciar la sesión (borra todo)</button><p id="facMsg" class="nota"></p></div></details>'
-      + '<small>Metodología y diseño del juego: Nathalia Velasco · Simoné</small></footer>';
-    const abierto = app.querySelector('details') && app.querySelector('details').open;
-    const pin = app.querySelector('#pin') ? app.querySelector('#pin').value : '';
-    const msg = app.querySelector('#facMsg') ? app.querySelector('#facMsg').textContent : '';
-    app.innerHTML = h;
-    if (abierto) { app.querySelector('details').open = true; app.querySelector('#pin').value = pin; app.querySelector('#facMsg').textContent = msg; }
   }
 
-  function qrSVG(texto) {
-    if (!window.qrcode) return '';
-    try { const q = window.qrcode(0, 'M'); q.addData(texto); q.make(); return q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { return ''; }
+  /* --------------------------------------------------- 4. estación */
+  function respuesta(id) { return (E.respuestas && E.respuestas[id]) || { intentos: 0, correcta: false, puntos: 0 }; }
+  function puntoEstado(id) { const r = respuesta(id); return r.correcta ? 'bien' : r.intentos >= 2 ? 'mal' : ''; }
+
+  function pEstacion() {
+    const c = contenido(vista.est), x = est(vista.est);
+    const tabs = c.pruebas.map((p, i) => '<button class="pestana ' + (vista.tab === i ? 'sel' : '') + '" data-tab="' + i + '"><span class="estado ' + puntoEstado(p.id) + '"></span>PRUEBA ' + p.id + '</button>').join('')
+      + '<button class="pestana ' + (vista.tab === c.pruebas.length ? 'sel' : '') + '" data-tab="' + c.pruebas.length + '"><span class="estado ' + puntoEstado(c.clave.id) + '"></span>CLAVE DE SALIDA</button>';
+    const cuerpo = vista.tab < c.pruebas.length ? vistaPrueba(c, c.pruebas[vista.tab]) : vistaClave(c);
+    const pendientes = c.pruebas.map(p => p.id).concat([c.clave.id]).filter(id => { const r = respuesta(id); return !r.correcta && r.intentos < 2; }).length;
+    pinta(cab('Estación ' + c.numero, true) + '<main class="pagina">'
+      + '<nav class="pestanas">' + tabs + '</nav>' + cuerpo + '</main>'
+      + '<div class="barra-inferior"><div class="interior" style="flex-direction:column;align-items:stretch">'
+      + '<div id="avisoTiempo"></div>'
+      + '<div style="display:flex;gap:10px;align-items:center"><span class="nota" id="notaFin">' + (pendientes ? pendientes + (pendientes === 1 ? ' código sin responder' : ' códigos sin responder') : 'Todos los códigos registrados') + '</span>'
+      + '<button class="btn primario" data-a="finalizar">VALIDAR Y FINALIZAR ESTACIÓN</button></div></div></div>');
+    iniciarReloj(x);
   }
 
-  function csv() {
-    const ranking = J.grupos.map(g => ({ id: g.id, total: totalDe(GRUPOS[g.id]) })).sort((a, b) => b.total - a.total);
-    const pos = {}; ranking.forEach((x, k) => { pos[x.id] = k + 1; });
-    const filas = [['GRUPO', 'NOMBRE COMPLETO', 'PROFESIÓN', 'ROL', 'AUTORIZA DATOS', 'REGISTRO'].concat(C.estaciones.map(e => 'E' + e.numero)).concat(['TOTAL GRUPO', 'POSICIÓN'])];
-    GENTE.forEach(p => {
-      const g = J.grupos.find(x => x.id === p.grupo) || {}, res = ((GRUPOS[p.grupo] || {}).res) || {};
-      const rol = (J.roles.find(r => r.id === p.rol) || {}).nombre || p.rol;
-      filas.push([g.nombre, p.nombre, p.profesion, rol, p.autoriza ? 'SÍ' : 'NO', p.creado].concat(C.estaciones.map(e => (res[e.id] || {}).total || 0)).concat([totalDe(GRUPOS[p.grupo]), pos[p.grupo]]));
-    });
-    const txt = '﻿' + filas.map(f => f.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'maquina-del-tiempo-resultados-' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a); a.click(); a.remove();
+  function tarjetaHTML(c, p) {
+    return '<section class="hud tarjeta">'
+      + '<div class="tarjeta-cab"><span>Tarjeta de instrucciones</span><span>Estación ' + c.numero + '</span></div>'
+      + '<h3>' + M.esc(c.nombre) + '</h3><p class="reto"><b>Reto:</b> ' + M.esc(p.reto) + '</p>'
+      + '<h4>' + M.esc(p.situacionTitulo) + '</h4><div class="situacion">' + p.situacion.map(s => '<p><b>' + M.esc(s[0]) + ':</b> ' + M.esc(s[1]) + '</p>').join('') + '</div>'
+      + '<div class="mision"><h4 style="margin-top:0">Misión del equipo</h4><ol>' + p.mision.map(m => '<li><b>' + M.esc(m[0]) + '</b>' + M.esc(m[1]) + '</li>').join('') + '</ol></div>'
+      + (p.atencion ? '<p class="atencion"><b>Atención Cronocirujanos:</b> ' + M.esc(p.atencion) + '</p>' : '')
+      + '<div class="tarjeta-cab" style="margin:14px 0 0"><span>Prueba ' + M.esc(p.id) + '</span><span>' + M.esc(p.titulo) + '</span></div>'
+      + '<button class="btn contorno pequeno btn-escuchar" data-a="escucharTarjeta">▶ ESCUCHAR TARJETA</button>'
+      + '</section>';
+  }
+  function textoTarjeta(c, p) {
+    return 'Prueba ' + p.id + '. ' + p.titulo + '. ' + p.situacion.map(s => s[0] + ': ' + s[1]).join(' ')
+      + ' Misión del equipo. ' + p.mision.map((m, i) => (i + 1) + '. ' + m[0] + '. ' + m[1]).join(' ')
+      + (p.atencion ? ' Atención, Cronocirujanos: ' + p.atencion : '');
   }
 
-  let confirmar = 0;
-  app.addEventListener('click', async function (ev) {
-    const b = ev.target.closest('[data-c]'); if (!b) return;
-    const msg = document.getElementById('facMsg');
-    if (b.dataset.c === 'csv') return csv();
-    if (b.dataset.c === 'reiniciar') {
-      if (!(confirmar && Date.now() - confirmar < 5000)) { confirmar = Date.now(); msg.textContent = 'Esto borra participantes y puntajes. Descarguen primero el CSV. Toquen de nuevo para confirmar.'; return; }
-      confirmar = 0;
-      try { await D.reiniciar(document.getElementById('pin').value); msg.textContent = 'Sesión reiniciada.'; await cargar(); }
-      catch (e) { msg.textContent = D.mensaje(e); }
+  function materialHTML(p, m, i) {
+    const k = clave(p.id + '-' + i);
+    if (m.tipo === 'monitor') {
+      if (!local[k]) return '<div class="material"><div class="material-cab">Exámenes clínicos</div><button class="btn contorno grande ancho latido" data-a="solicitar" data-k="' + k + '">' + M.esc(m.boton) + '</button></div>';
+      return '<div class="material"><div class="material-cab">Exámenes clínicos</div><div class="monitor"><svg viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true"><path class="ecg" pathLength="1000" d="M0 45 L60 45 L70 40 L78 45 L95 45 L100 10 L106 70 L112 45 L135 45 L145 36 L160 45 L200 45 L210 40 L218 45 L235 45 L240 10 L246 70 L252 45 L275 45 L285 36 L300 45 L340 45 L350 40 L358 45 L375 45 L380 10 L386 70 L392 45 L415 45 L425 36 L440 45 L480 45 L490 40 L498 45 L515 45 L520 10 L526 70 L532 45 L555 45 L565 36 L580 45 L600 45"/></svg>'
+        + '<div class="vitales">' + m.vitales.map(v => '<div class="vital ' + v[3] + '"><small>' + M.esc(v[0]) + '</small><b>' + M.esc(v[1]) + '</b><span>' + M.esc(v[2]) + '</span></div>').join('') + '</div>'
+        + '<div class="imagen-dx"><small>' + M.esc(m.imagen[0]) + '</small><b>' + M.esc(m.imagen[1]) + '</b><p>' + M.esc(m.imagen[2]) + '</p></div>'
+        + (m.nota ? '<p class="monitor-nota">' + M.esc(m.nota) + '</p>' : '') + '</div></div>';
     }
+    if (m.tipo === 'documento') {
+      return '<div class="material"><div class="material-cab">Contenido de la caja</div><article class="documento"><header><b>' + M.esc(m.titulo) + '</b><small>' + M.esc(m.encabezado) + '</small></header><dl>'
+        + m.lineas.map(l => '<dt>' + M.esc(l[0]) + '</dt><dd>' + M.esc(l[1]) + '</dd>').join('') + '</dl></article></div>';
+    }
+    if (m.tipo === 'tablero') {
+      return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><p class="suave" style="font-size:13px;margin-bottom:8px">' + M.esc(m.instruccion) + '</p><div class="tablero">'
+        + '<div class="tablero-fila cab"><span>' + m.columnas.map(M.esc).join('</span><span>') + '</span></div>'
+        + m.filas.map((f, j) => '<button class="tablero-fila ' + (local[k] === j ? 'marcada' : '') + '" data-a="marcarTablero" data-k="' + k + '" data-j="' + j + '"><b>' + M.esc(f[0]) + '</b><span>' + M.esc(f[1]) + '</span><span class="estado">' + M.esc(f[2]) + '</span></button>').join('')
+        + '</div></div>';
+    }
+    if (m.tipo === 'fichas') {
+      return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><p class="suave" style="font-size:13px;margin-bottom:8px">' + M.esc(m.instruccion) + '</p><div class="fichas">'
+        + m.items.map(it => '<div class="ficha"><span class="valor">' + M.esc(it[1]) + '</span><span>' + M.esc(it[0]) + '</span></div>').join('') + '</div></div>';
+    }
+    if (m.tipo === 'checklist') {
+      const marcadas = local[k] || [];
+      return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><p class="suave" style="font-size:13px;margin-bottom:8px">' + M.esc(m.instruccion) + '</p><div class="fichas">'
+        + m.items.map((it, j) => '<button class="ficha check ' + (marcadas.indexOf(j) >= 0 ? 'marcada' : '') + '" data-a="marcarCheck" data-k="' + k + '" data-j="' + j + '"><span class="valor">' + M.esc(it[0]) + '</span><span>' + M.esc(it[1]) + '</span><span class="distintivo">Embajadores</span></button>').join('')
+        + '</div></div>';
+    }
+    if (m.tipo === 'archivo') {
+      return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><p class="suave" style="font-size:13px;margin-bottom:8px">' + M.esc(m.instruccion) + '</p><div class="archivo">'
+        + m.items.map(it => '<div class="dato"><small>' + M.esc(it[0]) + '</small><b>' + M.esc(it[1]) + '</b></div>').join('') + '</div></div>';
+    }
+    if (m.tipo === 'prevena') {
+      const url = M.urlDe('prevena.html', {});
+      return '<div class="material"><div class="material-cab">App Prevena™</div><section class="hud centro"><p style="margin-bottom:12px">Cualquier tripulante puede abrir la app en su celular (iPhone o Android).</p>'
+        + '<a class="btn primario grande ancho" href="' + M.esc(url) + '" target="_blank" rel="noopener">ABRIR APP PREVENA™ ↗</a>'
+        + '<p class="suave" style="font-size:12px;margin-top:10px;word-break:break-all">' + M.esc(url) + '</p></section></div>';
+    }
+    return '';
+  }
+
+  function cajaCodigo(cod, def) {
+    const r = respuesta(cod), quedan = 2 - (r.intentos || 0);
+    let cuerpo;
+    if (r.correcta) {
+      cuerpo = (def.candado ? '<div class="candado abierto"><i></i></div>' : '')
+        + '<div class="resultado bien"><b>CÓDIGO CORRECTO</b><div class="valor">' + M.esc(r.mostrar || r.valor || '') + '</div><small>+' + r.puntos + ' puntos · Copiloto: regístrenlo en la bitácora</small></div>';
+    } else if (r.intentos >= 2) {
+      cuerpo = '<div class="resultado mal"><b>SIN INTENTOS · 0 PUNTOS</b><small>La respuesta correcta era</small><div class="valor">' + M.esc(r.mostrar || '') + '</div><small>Anótenla en la bitácora' + (def.candado ? ' y úsenla para abrir el candado.' : ' y sigan avanzando.') + '</small></div>';
+    } else {
+      cuerpo = (def.candado ? '<div class="candado"><i></i></div>' : '')
+        + '<form data-form="' + M.esc(cod) + '"><p class="formato">' + M.esc(def.formato) + '</p>'
+        + '<input class="entrada-codigo" id="in-' + M.esc(cod) + '" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="' + M.esc(def.placeholder || '') + '">'
+        + '<div class="intentos"><i class="' + (r.intentos >= 1 ? 'gastado' : '') + '"></i><i></i><span>' + quedan + (quedan === 1 ? ' intento' : ' intentos') + '</span></div>'
+        + (r.intentos === 1 ? '<p class="error">Código incorrecto. Les queda un intento.</p>' : '<p class="error" id="err-' + M.esc(cod) + '"></p>')
+        + '<div class="acciones"><button class="btn primario grande" type="submit">VALIDAR CÓDIGO</button></div></form>';
+    }
+    return '<section class="hud caja-codigo bloque" style="margin-top:16px"><p class="sobretitulo">Código ' + M.esc(cod) + ' · ' + (r.max || '') + ' puntos</p>'
+      + '<p class="pregunta">' + M.esc(def.pregunta) + '</p>' + cuerpo + '</section>';
+  }
+
+  function pistasHTML(p) {
+    if (!p.pistas || !p.pistas.length) return '';
+    const k = clave('vista-' + p.id), desde = local[k] || M.ahora();
+    const seg = (M.ahora() - desde) / 1000;
+    const items = p.pistas.map((t, i) => {
+      const umbral = J.pistasSegundos[i] || 999999;
+      return seg >= umbral ? '<div class="pista"><small>Pista ' + (i + 1) + '</small>' + M.esc(t) + '</div>'
+                           : (i === 0 || seg >= (J.pistasSegundos[i - 1] || 0)) ? '<div class="pista espera"><small>Pista ' + (i + 1) + '</small>Disponible en ' + M.mmss(umbral - seg) + '</div>' : '';
+    }).join('');
+    return '<section class="pistas" id="pistas">' + items + '</section>';
+  }
+
+  function vistaPrueba(c, p) {
+    const k = clave('vista-' + p.id);
+    if (!local[k]) { local[k] = M.ahora(); guardarLocal(); }
+    return tarjetaHTML(c, p) + (p.pantalla || []).map((m, i) => materialHTML(p, m, i)).join('')
+      + cajaCodigo(p.id, p.codigo) + pistasHTML(p)
+      + '<div class="acciones"><button class="btn fantasma" data-tab="' + (vista.tab + 1) + '">' + (vista.tab + 1 < c.pruebas.length ? 'SIGUIENTE PRUEBA →' : 'IR A LA CLAVE DE SALIDA →') + '</button></div>';
+  }
+  function vistaClave(c) {
+    return '<section class="hud tarjeta"><div class="tarjeta-cab"><span>Consola de validación</span><span>Estación ' + c.numero + '</span></div>'
+      + '<h3>' + M.esc(c.clave.titulo) + '</h3><p class="reto">Con la clave de salida, el equipo desacopla la estación. Después, validen y finalicen.</p></section>'
+      + cajaCodigo(c.clave.id, c.clave);
+  }
+
+  /* reloj de la estación (hora del servidor) */
+  function iniciarReloj(x) {
+    let ultimo = -1, aviso = false;
+    const pasar = () => {
+      const trans = (M.ahora() - new Date(x.inicio).getTime()) / 1000;
+      const rest = x.limite - trans, enGracia = rest <= 0, fin = trans >= x.limite + x.gracia;
+      const el = document.getElementById('reloj');
+      if (el) {
+        el.textContent = enGracia ? '+' + M.mmss(-rest) : M.mmss(rest);
+        el.classList.toggle('urgente', !enGracia && rest <= 120);
+        el.classList.toggle('gracia', enGracia);
+      }
+      const s = Math.ceil(rest);
+      if (s !== ultimo) { ultimo = s; if (s <= 30 && s > -x.gracia) M.SFX.tic(); }
+      const av = document.getElementById('avisoTiempo');
+      if (enGracia && av && !aviso) {
+        aviso = true;
+        av.innerHTML = '<div class="aviso-tiempo">¡Tiempo cumplido! Tienen 30 segundos para validar y finalizar.</div>';
+        M.SFX.error(); M.decir('Tiempo cumplido. Tienen treinta segundos para validar y finalizar la estación.');
+      }
+      if (fin) { clearInterval(tick); tick = null; cerrarPorTiempo(); }
+      const ps = document.getElementById('pistas');
+      if (ps && Math.floor(trans) % 5 === 0) { const c = contenido(vista.est), p = c.pruebas[vista.tab]; if (p) ps.outerHTML = pistasHTML(p); }
+    };
+    pasar(); tick = setInterval(pasar, 500);
+  }
+  async function cerrarPorTiempo() {
+    try { await refrescar(); } catch (e) {}
+    M.SFX.error();
+    pantalla = decidirPantalla(); render();
+  }
+
+  async function validar(cod) {
+    const inp = document.getElementById('in-' + cod);
+    const valor = (inp && inp.value || '').trim();
+    if (!valor) { const e = document.getElementById('err-' + cod); if (e) e.textContent = 'Escriban el código antes de validar.'; return; }
+    const btn = app.querySelector('[data-form="' + cod + '"] button[type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'VALIDANDO…'; }
+    try {
+      const r = await M.rpc('mdt_responder', { p_codigo: cfg.codigo, p_grupo: cfg.grupo, p_codigo_id: cod, p_valor: valor });
+      E.respuestas[cod] = Object.assign({}, E.respuestas[cod], r, { valor: valor.toUpperCase() });
+      const def = codigoDef(cod);
+      if (r.correcta) { def.candado ? M.SFX.candado() : M.SFX.ok(); M.decir('Código correcto.'); }
+      else if (r.intentos >= 2) { M.SFX.error(); M.decir('Sin intentos. La respuesta correcta era ' + String(r.mostrar || '').split('').join(' ') + '. Sigan avanzando.'); }
+      else { M.SFX.error(); M.decir('Código incorrecto. Les queda un intento.'); }
+      const y = window.scrollY; pEstacion(); window.scrollTo(0, y);
+      const n = document.getElementById('in-' + cod); if (n && !r.correcta && r.intentos < 2) n.classList.add('sacudir');
+    } catch (e) {
+      if (/^CERRADA:/.test(e.message)) return cerrarPorTiempo();
+      const el = document.getElementById('err-' + cod); if (el) el.textContent = M.mensajeError(e);
+      if (btn) { btn.disabled = false; btn.textContent = 'VALIDAR CÓDIGO'; }
+    }
+  }
+  function codigoDef(cod) {
+    const c = contenido(vista.est);
+    if (c.clave.id === cod) return c.clave;
+    const p = c.pruebas.find(x => x.id === cod); return p ? p.codigo : {};
+  }
+
+  async function finalizar(btn) {
+    if (!confirmarFin || Date.now() - confirmarFin > 5000) {
+      confirmarFin = Date.now();
+      document.getElementById('notaFin').innerHTML = '<b style="color:var(--blanco)">¿Seguros? Al finalizar se detiene el reloj y no se pueden digitar más códigos. Toquen de nuevo para confirmar.</b>';
+      btn.textContent = 'CONFIRMAR FINALIZAR'; return;
+    }
+    confirmarFin = 0; btn.disabled = true; btn.textContent = 'REGISTRANDO…';
+    try {
+      E = await M.rpc('mdt_finalizar', { p_codigo: cfg.codigo, p_grupo: cfg.grupo, p_estacion: vista.est });
+      M.sincronizar(E.ahora); pantalla = 'cierre'; M.SFX.ok(); render();
+    } catch (e) { btn.disabled = false; btn.textContent = 'VALIDAR Y FINALIZAR ESTACIÓN'; document.getElementById('notaFin').textContent = M.mensajeError(e); }
+  }
+
+  /* ------------------------------------------------- 5. cierre de estación */
+  function pCierre() {
+    const c = contenido(vista.est), x = est(vista.est), agotada = x.estado === 'agotada';
+    const cods = c.pruebas.map(p => ({ id: p.id, titulo: p.titulo })).concat([{ id: c.clave.id, titulo: c.clave.titulo }]);
+    const filas = cods.map(k => {
+      const r = respuesta(k.id);
+      const det = r.correcta ? '✓ ' + M.esc(r.mostrar || '') : '✗ <em>Correcta: ' + M.esc(r.mostrar || '—') + '</em>';
+      return '<tr class="' + (r.correcta && !agotada ? '' : 'mal') + '"><td>Código ' + M.esc(k.id) + ' · ' + det + '</td><td>' + (agotada ? 0 : r.puntos) + ' / ' + (r.max || 0) + '</td></tr>';
+    }).join('');
+    const sig = E.estaciones.find(y => y.estado === 'pendiente');
+    pinta(cab('Estación ' + c.numero + ' · Cierre') + '<main class="pagina">'
+      + '<section class="hud desbloqueo ' + (agotada ? 'agotada' : '') + '"><p class="sobretitulo">Estación ' + c.numero + ' · ' + M.esc(c.nombre) + '</p>'
+      + '<h2>' + M.esc(agotada ? 'EL RELOJ CERRÓ LA ESTACIÓN' : c.desbloqueo.titulo) + '</h2>'
+      + '<p>' + M.esc(agotada ? 'Se cumplieron los 12 minutos y los 30 segundos de gracia. Esta estación no suma puntos, pero el aprendizaje sigue: revisen las respuestas correctas.' : c.desbloqueo.texto) + '</p>'
+      + '<div class="marcador"><b>' + (agotada ? 0 : x.total) + '</b><span>/ 20</span></div>'
+      + '<table class="tabla-puntos"><tbody>' + filas
+      + '<tr class="' + (agotada ? 'mal' : '') + '"><td>Agilidad · tiempo ' + M.mmss(x.seg_usados || 0) + '</td><td>+' + (agotada ? 0 : x.pts_tiempo) + '</td></tr>'
+      + '</tbody></table></section>'
+      + '<section class="hud bloque" id="guardian">' + guardian('Retroalimentación') + '<p class="frase-cierre">' + M.esc(c.cierre) + '</p>'
+      + '<div class="acciones"><button class="btn contorno" data-a="escucharCierre">▶ ESCUCHAR DE NUEVO</button></div></section>'
+      + '<div class="acciones"><button class="btn primario grande ancho" data-a="continuar">' + (sig ? 'CONTINUAR A LA ESTACIÓN ' + sig.numero + ' →' : 'VER RESULTADO FINAL →') + '</button></div>'
+      + '</main>');
+    hablarCierre();
+  }
+  function hablarCierre() {
+    const c = contenido(vista.est), x = est(vista.est);
+    const g = document.getElementById('guardian'); if (g) g.classList.add('hablando');
+    const intro = x.estado === 'agotada' ? 'El reloj cerró la estación. ' : c.desbloqueo.titulo + ' ';
+    M.decir(intro + c.cierre, () => { const h = document.getElementById('guardian'); if (h) h.classList.remove('hablando'); });
+  }
+
+  /* ------------------------------------------------------------ 6. final */
+  async function pFinal() {
+    const filas = E.estaciones.map(x => '<tr class="' + (x.estado === 'agotada' ? 'mal' : '') + '"><td>Estación ' + x.numero + ' · ' + M.esc(contenido(x.id).nombre) + '</td><td>' + x.total + ' / 20</td></tr>').join('');
+    pinta(cab('Misión cumplida') + '<main class="pagina">'
+      + '<section class="hud desbloqueo"><p class="sobretitulo">Fin de la línea de tiempo</p><h2>' + M.esc(J.final.mensaje) + '</h2><p>' + M.esc(J.final.detalle) + '</p>'
+      + '<div class="marcador"><b>' + E.total + '</b><span>/ 100</span></div><p id="puesto" class="sobretitulo centro" style="margin-top:6px"></p>'
+      + '<table class="tabla-puntos"><tbody>' + filas + '</tbody></table></section>'
+      + '<section class="hud bloque" id="guardian">' + guardian('El Guardián de la Línea del Tiempo') + '<p class="frase-cierre">' + M.esc(J.final.frase) + '</p>'
+      + '<div class="acciones"><button class="btn contorno" data-a="escucharFinal">▶ ESCUCHAR</button></div></section>'
+      + '<p class="suave centro" style="margin-top:16px">Miren el Pórtico para conocer al grupo ganador.</p></main>');
+    M.decir(J.final.mensaje + ' ' + J.final.frase);
+    try {
+      const t = await M.rpc('mdt_tablero', {});
+      const orden = t.grupos.filter(g => g.registrado).sort((a, b) => b.total - a.total);
+      const i = orden.findIndex(g => g.grupo === cfg.grupo);
+      const el = document.getElementById('puesto'); if (el && i >= 0) el.textContent = 'Posición actual: ' + (i + 1) + ' de ' + orden.length;
+    } catch (e) {}
+  }
+
+  /* ---------------------------------------------------- ajustes de voz */
+  function modalVoz() {
+    const vs = M.voces;
+    const html = '<div class="modal" id="modal"><section class="hud"><p class="sobretitulo">Voz del Guardián</p>'
+      + '<p class="suave" style="font-size:14px">Se elige automáticamente una voz masculina en español latinoamericano cuando el celular la tiene. Si suena una voz femenina, elijan otra de la lista (las marcadas con ♂ son masculinas).</p>'
+      + '<div class="lista-voces">' + (vs.length ? vs.map(v => '<button data-voz="' + M.esc(v.voiceURI) + '" class="' + (M.vozElegida && M.vozElegida.voiceURI === v.voiceURI ? 'sel' : '') + '">' + (M.esMasculina(v) ? '♂ ' : '') + M.esc(v.name) + '<small>' + M.esc(v.lang) + '</small></button>').join('') : '<p class="suave">Este navegador no tiene voces en español.</p>') + '</div>'
+      + '<div class="acciones"><button class="btn primario" data-a="cerrarModal">LISTO</button></div></section></div>';
+    app.insertAdjacentHTML('beforeend', html);
+  }
+
+  /* ------------------------------------------------------------ eventos */
+  app.addEventListener('submit', ev => { const f = ev.target.closest('[data-form]'); if (f) { ev.preventDefault(); validar(f.dataset.form); } });
+  app.addEventListener('click', ev => {
+    const tab = ev.target.closest('[data-tab]');
+    if (tab) { M.callar(); vista.tab = +tab.dataset.tab; pEstacion(); window.scrollTo(0, 0); const c = contenido(vista.est), p = c.pruebas[vista.tab]; if (p && !local[clave('oida-' + p.id)]) { local[clave('oida-' + p.id)] = 1; guardarLocal(); M.decir(textoTarjeta(c, p)); } return; }
+    const v = ev.target.closest('[data-voz]');
+    if (v) { M.elegirVoz(v.dataset.voz); app.querySelectorAll('[data-voz]').forEach(b => b.classList.toggle('sel', b === v)); M.decir('Esta es la voz del Guardián de la Línea del Tiempo.'); return; }
+    const b = ev.target.closest('[data-a]'); if (!b) return;
+    M.audio();
+    const a = b.dataset.a;
+    if (a === 'sonido') { b.textContent = M.alternarSonido() ? 'SONIDO ON' : 'SONIDO OFF'; return; }
+    if (a === 'voz') return modalVoz();
+    if (a === 'cerrarModal') { const m = document.getElementById('modal'); if (m) m.remove(); return; }
+    if (a === 'reintentar') return cargar();
+    if (a === 'escucharBienvenida') return hablarBienvenida();
+    if (a === 'actualizar') return cargar();
+    if (a === 'cruzar') { local[clave('bienvenida')] = 1; guardarLocal(); M.callar(); M.SFX.portal(); pantalla = 'linea'; return render(); }
+    if (a === 'abrir') { b.disabled = true; b.textContent = 'ABRIENDO…'; return abrir(b.dataset.est); }
+    if (a === 'escucharTarjeta') { const c = contenido(vista.est); return M.decir(textoTarjeta(c, c.pruebas[vista.tab])); }
+    if (a === 'solicitar') {
+      local[b.dataset.k] = 1; guardarLocal();
+      const y = window.scrollY; pEstacion(); window.scrollTo(0, y); M.SFX.monitor(6);
+      const p = contenido(vista.est).pruebas[vista.tab], m = (p.pantalla || []).find(x => x.tipo === 'monitor');
+      return M.decir(m && m.voz);
+    }
+    if (a === 'marcarTablero') { local[b.dataset.k] = +b.dataset.j; guardarLocal(); const y = window.scrollY; pEstacion(); window.scrollTo(0, y); return M.SFX.paso(); }
+    if (a === 'marcarCheck') {
+      const arr = local[b.dataset.k] || [], j = +b.dataset.j, i = arr.indexOf(j);
+      if (i >= 0) arr.splice(i, 1); else arr.push(j);
+      local[b.dataset.k] = arr; guardarLocal(); const y = window.scrollY; pEstacion(); window.scrollTo(0, y); return M.SFX.paso();
+    }
+    if (a === 'finalizar') return finalizar(b);
+    if (a === 'escucharCierre') return hablarCierre();
+    if (a === 'escucharFinal') return M.decir(J.final.frase);
+    if (a === 'continuar') { local[clave('cierre-' + vista.est)] = 1; guardarLocal(); M.callar(); pantalla = decidirPantalla(); return render(); }
   });
 
-  async function cargar() {
-    try {
-      const [g, p] = await Promise.all([D.grupos(), D.participantes()]);
-      GRUPOS = g || {}; GENTE = p || []; ERROR = '';
-    } catch (e) { ERROR = 'Sin conexión con la base de datos. Reintentando…'; }
-    pinta();
-  }
-  (async function () {
-    try { OFFSET = (await D.ahora()) - Date.now(); } catch (e) {}
-    await cargar();
-    setInterval(cargar, 2000);
-    setInterval(() => { const t = document.querySelectorAll('.fila em'); if (t.length) pinta(); }, 1000);
-  })();
+  /* Sondeo suave: si el reloj del servidor cierra la estación, la consola se entera. */
+  sondeo = setInterval(async () => {
+    if (pantalla !== 'estacion' || document.hidden) return;
+    try { const antes = vista.est; await refrescar(); const x = est(antes); if (x && x.estado !== 'abierta') { pantalla = decidirPantalla(); render(); } } catch (e) {}
+  }, 20000);
+
+  if (cfg.codigo && cfg.grupo && M.leer('consola', null)) cargar(); else pAcceso();
 })();

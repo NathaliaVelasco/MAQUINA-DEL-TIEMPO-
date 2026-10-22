@@ -1,60 +1,47 @@
 # Máquina del Tiempo · Código: Cirugía del Futuro
 
-Escape room médica **híbrida** sobre manejo de abdomen abierto. El material físico (fichas, cubos, cajas con candado, kit AbThera™) viaja en una maleta a cargo del Guía Especialista. Esta plataforma es el facilitador digital: registra a los participantes, conduce las 5 estaciones en orden, muestra las tarjetas de instrucciones, controla el tiempo, valida los códigos y lleva el puntaje en vivo.
+Escape room médica **híbrida** sobre manejo de abdomen abierto. El material físico (fichas, cubos, cajas con candado, kit AbThera™) viaja en una maleta a cargo del Guía Especialista. Este ecosistema digital es el facilitador: registra a los participantes, conduce las 5 estaciones en orden, muestra las tarjetas de instrucciones, controla el tiempo, valida los códigos y muestra los resultados en vivo.
 
 **Metodología, diseño del juego y piezas físicas:** Nathalia Velasco · Simoné. Todos los derechos reservados.
 
 ## Pantallas
 
-| Pantalla | Dirección | Quién |
+| Pantalla | Archivo | Quién la usa |
 |---|---|---|
-| Consola de misión | `/` (index.html) | El celular de cada participante (iPhone o Android) |
-| Consola de resultados | `/consola.html` | Pantalla grande o proyector: ranking en vivo, QR de ingreso, descarga CSV y reinicio con PIN |
+| Inicio | `index.html` | Acceso a todo |
+| Kit de tripulación | `kit.html` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
+| Consola del equipo | `consola.html` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
+| Pórtico | `portico.html` | Pantalla grande: resultados de los 4 grupos en vivo, QR de ingreso y panel del facilitador (PIN) |
+| App Prevena™ | `prevena.html` | Estación 5: cualquier tripulante, con el código de la Prueba 5.2 |
 
-## Cómo se juega
+## Reglas implementadas (las controla el servidor)
 
-1. **Registro** en el celular: nombre completo, profesión (en mayúsculas), grupo, rol y autorización de datos (Ley 1581). 4 grupos × 7: 1 Líder Piloto, 1 Copiloto, 1 Comandante de Misión y 4 Tripulantes de Élite.
-2. **Pórtico**: bienvenida del Guardián, credencial, tripulación y reglas.
-3. **Estaciones 1 → 5** en orden obligatorio. El Comandante inicia el reloj, digita los códigos y avanza; el resto del grupo ve lo mismo en su celular. Si el celular del Comandante falla, otro integrante puede "tomar el mando".
-4. **Retroalimentación** al cerrar cada estación (voz + texto).
-5. **Cierre**: score total sobre 100 y posiciones.
-
-## Reglas implementadas
-
+- 4 grupos × 7: 1 Líder Piloto, 1 Copiloto, 1 Comandante de Misión y 4 Tripulantes de Élite.
+- Recorrido obligatorio E1 → E5. Una estación no se abre si la anterior no se cerró, ni si otro grupo la está usando (una sola maleta).
 - 12:00 de juego + 30 s de gracia. A las **12:30** la estación se cierra sola y queda en **cero** (respuestas y tiempo).
-- **2 intentos** por código. Si fallan los dos, la pantalla muestra la respuesta correcta (0 puntos) para que puedan seguir aprendiendo y abrir el candado físico.
-- Puntos por respuesta según el documento del cliente (4 + 4 + 4 + 2; en E3: 4 + 8 + 2).
-- Bonificación por agilidad (se mide al pulsar VALIDAR Y FINALIZAR):
-  - Estaciones 1, 2, 4 y 5: ≤ 5:00 → +6 · ≤ 8:00 → +5 · ≤ 11:00 → +4 · ≤ 12:30 → +3
-  - Estación 3 (procedimiento físico con AbThera™): ≤ 7:00 → +6 · ≤ 9:30 → +5 · ≤ 11:30 → +4 · ≤ 12:30 → +3
-- Lo que antes estaba en las paredes aparece en pantalla (tablero de tiempos, excepciones, check-list de cierre, parámetros de Prevena™).
-- Aplicación Prevena™ (Prueba 5.3) dentro del celular, con código de activación.
-- Voz automática del dispositivo; se elige una voz masculina de español latinoamericano cuando existe. La voz viene activada en el celular del Comandante.
+- **2 intentos** por código. Al segundo fallo se muestra la respuesta correcta (0 puntos) para aprender y poder abrir el candado físico.
+- Puntos por respuesta definidos por el cliente (4 + 4 + 4 + 2; en E3: 4 + 8 + 2) + bonificación por agilidad al pulsar VALIDAR Y FINALIZAR:
+  - E1, E2, E4 y E5: ≤ 5:00 → +6 · ≤ 8:00 → +5 · ≤ 11:00 → +4 · ≤ 12:30 → +3
+  - E3 (procedimiento físico con AbThera™): ≤ 6:00 → +6 · ≤ 9:00 → +5 · ≤ 11:30 → +4 · ≤ 12:30 → +3
+- Lo que antes estaba en las paredes aparece en pantalla: monitor de signos vitales, tablero de tiempos, situaciones de UCI, check-list de cierre y archivo técnico de Prevena™.
+- Voz automática del dispositivo: se elige una voz masculina en español latinoamericano cuando existe (botón VOZ para cambiarla).
+- Las respuestas **no están en este repositorio**: se cargan en la base de datos con un archivo privado.
 
-## Modo demo y modo en vivo
+## Base de datos (Supabase)
 
-- Sin configurar la base de datos, el juego funciona en **modo demo**: todo vive en un solo navegador. Para mostrarlo, abran `consola.html` en una pestaña y el juego en otras (cada pestaña es un jugador). PIN de reinicio en demo: `0000`.
-- Para jugar con celulares reales: crear un proyecto gratuito en Supabase, ejecutar `supabase/instalar.sql` y pegar la URL y la clave pública en `js/config.js`.
+1. `servidor/1_instalar.sql` crea la estructura y las reglas (se puede publicar).
+2. `2_respuestas_PRIVADO.sql` carga respuestas, código de acceso y PIN (no se publica; lo tiene Simoné).
+3. La URL y la clave pública del proyecto van en `js/config.js`.
 
-## Archivos
+## Contenido
 
-```
-index.html · consola.html
-js/contenido.js   TODO el contenido: tarjetas, códigos, puntos, bandas, retroalimentación
-js/huellas.js     Respuestas cifradas (SHA-256), no editar a mano
-js/app.js         Consola de misión (celular)
-js/consola.js     Consola de resultados
-js/prevena.js     Aplicación Prevena™
-js/datos.js       Conexión con la base de datos (Supabase o demo)
-js/config.js      URL y clave de Supabase
-supabase/instalar.sql
-```
+Todos los textos (tarjetas, pantallas, retroalimentación, app Prevena™) están en `js/contenido.js`.
 
 ## Pendientes de contenido (revisión con el cliente)
 
-- Clave de la Estación 3: el documento dice "125-8 (o 120)"; la resta da **117**, que es la que está programada.
+- Clave de la Estación 3: el documento dice "125-8 (o 120)"; la resta da **117**, que es la programada.
 - Estación 5: el documento deja "1257 o 125" y "6 o 5"; están programados **1257** y **6**.
-- Pasos de la aplicación Prevena™: borrador, debe validarlos Solventum.
+- Pasos de la app Prevena™: borrador, debe validarlos Solventum.
 - Opciones del tablero de tiempos de la E4 (6 h a 7 días): propuesta.
-- Pistas por estación: solo la E1 tiene pistas; las demás se cargarán tras la revisión.
-- Mensaje de desbloqueo de la E4: el documento decía "fase de estaciones concluida" (falta la E5); se ajustó.
+- Pistas: solo la E1 tiene pistas de ejemplo; se cargarán tras la revisión.
+- Texto de autorización de datos: validar con el área legal de Solventum.
