@@ -108,7 +108,7 @@
       + (registro.rol === 'comandante'
           ? '<div class="acciones"><a class="btn primario grande latido" href="' + M.esc(M.urlDe('consola.html', { grupo: registro.grupo })) + '">ABRIR LA CONSOLA DE MISIÓN →</a></div>'
             + '<p class="suave" style="margin-top:10px;font-size:13px">Usted digita los códigos del grupo. Mantenga este celular con batería y conexión.</p>'
-          : '<p class="suave" style="margin-top:16px;font-size:14px">El Comandante de Misión conduce el juego desde su celular. En la Estación 5 activarán la <a href="prevena.html" style="color:var(--malachite)">app Prevena™</a>.</p>')
+          : '<p class="suave" style="margin-top:16px;font-size:14px">El Comandante de Misión conduce el juego desde su celular.</p>')
       + '</section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
       + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button></div>'

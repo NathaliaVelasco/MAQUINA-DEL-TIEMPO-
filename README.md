@@ -12,7 +12,6 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Kit de tripulación | `kit.html` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
 | Consola del equipo | `consola.html` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
 | Pórtico | `portico.html` | Pantalla grande: resultados de los 4 grupos en vivo, QR de ingreso y panel del facilitador (PIN) |
-| App Prevena™ | `prevena.html` | Estación 5: cualquier tripulante, con el código de la Prueba 5.2 |
 
 ## Reglas implementadas (las controla el servidor)
 
@@ -23,7 +22,8 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 - Puntos por respuesta definidos por el cliente (4 + 4 + 4 + 2; en E3: 4 + 8 + 2) + bonificación por agilidad al pulsar VALIDAR Y FINALIZAR:
   - E1, E2, E4 y E5: ≤ 5:00 → +6 · ≤ 8:00 → +5 · ≤ 11:00 → +4 · ≤ 12:30 → +3
   - E3 (procedimiento físico con AbThera™): ≤ 6:00 → +6 · ≤ 9:00 → +5 · ≤ 11:30 → +4 · ≤ 12:30 → +3
-- Lo que antes estaba en las paredes aparece en pantalla: monitor de signos vitales, tablero de tiempos, situaciones de UCI, check-list de cierre y archivo técnico de Prevena™.
+- Lo que antes estaba en las paredes aparece en pantalla: monitor de signos vitales, tablero de tiempos, situaciones de UCI, check-list de cierre, archivo técnico de Prevena™ y la imagen de evidencia con las 6 ventajas y el sello NP2010 (se muestra al resolver el código 5.2).
+- La aplicación Prevena™ es del cliente (desarrollo externo): la consola solo enlaza a ella. El enlace va en `appPrevena.url` dentro de `js/contenido.js`.
 - Voz automática del dispositivo: se elige una voz masculina en español latinoamericano cuando existe (botón VOZ para cambiarla).
 - Las respuestas **no están en este repositorio**: se cargan en la base de datos con un archivo privado.
 
@@ -35,13 +35,14 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 
 ## Contenido
 
-Todos los textos (tarjetas, pantallas, retroalimentación, app Prevena™) están en `js/contenido.js`.
+Todos los textos (tarjetas, pantallas, retroalimentación) están en `js/contenido.js`.
 
 ## Pendientes de contenido (revisión con el cliente)
 
 - Clave de la Estación 3: el documento dice "125-8 (o 120)"; la resta da **117**, que es la programada.
 - Estación 5: el documento deja "1257 o 125" y "6 o 5"; están programados **1257** y **6**.
-- Pasos de la app Prevena™: borrador, debe validarlos Solventum.
+- Enlace de la aplicación Prevena™ del cliente: pendiente.
+- Clave final NP2010 y su mecánica: revisar con el cliente.
 - Opciones del tablero de tiempos de la E4 (6 h a 7 días): propuesta.
 - Pistas: solo la E1 tiene pistas de ejemplo; se cargarán tras la revisión.
 - Texto de autorización de datos: validar con el área legal de Solventum.

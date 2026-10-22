@@ -323,9 +323,12 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .menu .hud span { color: var(--gris); font-size: 14px; }
 
 /* ---------- Prevena ---------- */
-.prevena-ilustracion { width: 100%; max-width: 420px; display: block; margin: 0 auto; }
-.paso-prevena { text-align: center; }
-.paso-prevena h3 { color: var(--malachite); text-transform: uppercase; font-size: 18px; margin: 10px 0 8px; }
+.imagen-evidencia { margin: 0; padding: 18px; border-radius: 16px; border: 1px solid var(--linea); background:
+  linear-gradient(rgba(5, 221, 77, .05) 1px, transparent 1px) 0 0 / 28px 28px,
+  linear-gradient(90deg, rgba(5, 221, 77, .05) 1px, transparent 1px) 0 0 / 28px 28px,
+  radial-gradient(circle at 50% 0%, rgba(1, 51, 43, .95), #000 75%); box-shadow: inset 0 0 40px rgba(5, 221, 77, .08); }
+.evidencia-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--linea); font: 700 10px var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--malachite); }
+.logo-evidencia { height: 18px; width: auto; }
 .puntos-pasos { display: flex; gap: 6px; justify-content: center; margin: 10px 0; }
 .puntos-pasos i { width: 26px; height: 4px; border-radius: 2px; background: #23302d; }
 .puntos-pasos i.on { background: var(--malachite); box-shadow: var(--brillo); }

@@ -18,6 +18,7 @@ drop function if exists public.mdt_responder(text,text,text,text);
 drop function if exists public.mdt_finalizar(text,text,text);
 drop function if exists public.mdt_tablero();
 drop function if exists public.mdt_prevena(text);
+drop function if exists public.mdt_ventajas(text,text);
 drop function if exists public.mdt_admin(text,text,text);
 drop schema if exists mdt cascade;
 create schema mdt;
@@ -56,7 +57,7 @@ create table mdt.codigos (
   mostrar    text not null default ''     -- respuesta que se muestra al fallar
 );
 
-create table mdt.privado (                -- contenido protegido (ej. ventajas Prevena)
+create table mdt.privado (                -- contenido protegido (ventajas Prevena™ de la prueba 5.3)
   clave text primary key,
   valor jsonb not null
 );
@@ -359,16 +360,18 @@ begin
     left join mdt.equipos e on e.grupo = g.grupo and e.sesion = mdt.sesion()), '[]'::json));
 end $$;
 
--- 9. App Prevena™: se desbloquea con el código del candado de la Prueba 5.2.
-create function public.mdt_prevena(p_clave text) returns json
+-- 9. Evidencia de Prevena™ (prueba 5.3): se entrega cuando el equipo ya
+--    resolvió el código 5.2 (acertó o agotó sus 2 intentos).
+create function public.mdt_ventajas(p_codigo text, p_grupo text) returns json
 language plpgsql security definer set search_path = mdt, public as $$
-declare v_resp text[];
+declare v_eq int;
 begin
-  select respuestas into v_resp from mdt.codigos where id = '5.2';
-  if not (mdt.norm(p_clave) = any (coalesce(v_resp, '{}'))) then
-    raise exception 'Código de activación incorrecto.';
+  perform mdt.verificar_codigo(p_codigo);
+  v_eq := mdt.equipo_id(p_grupo);
+  if not exists (select 1 from mdt.respuestas where equipo = v_eq and codigo = '5.2' and (correcta or intentos >= 2)) then
+    raise exception 'Primero registren el código de la prueba 5.2.';
   end if;
-  return coalesce((select valor from mdt.privado where clave = 'prevena'), '{}'::jsonb)::json;
+  return coalesce((select valor from mdt.privado where clave = 'ventajas'), '{}'::jsonb)::json;
 end $$;
 
 -- 10. Facilitador (con PIN): nueva sesión, código de acceso, reabrir grupo, exportar.
@@ -419,5 +422,5 @@ do $$ begin
   execute 'grant execute on function public.mdt_acceso(text), public.mdt_unirse(text,text,text,text,text,boolean,text),
            public.mdt_tripulacion(text,text), public.mdt_consola(text,text), public.mdt_abrir(text,text,text),
            public.mdt_responder(text,text,text,text), public.mdt_finalizar(text,text,text), public.mdt_tablero(),
-           public.mdt_prevena(text), public.mdt_admin(text,text,text) to anon, authenticated';
+           public.mdt_ventajas(text,text), public.mdt_admin(text,text,text) to anon, authenticated';
 end $$;

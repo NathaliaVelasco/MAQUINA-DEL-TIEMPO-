@@ -14,6 +14,7 @@
   let pantalla = 'acceso', vista = { est: null, tab: 0 };
   let local = M.leer('consola-local', {});   // monitor revelado, marcas en pantalla, cierres vistos
   let tick = null, sondeo = null, confirmarFin = 0, ocupada = '';
+  let ventajas = M.leer('ventajas', null), cargandoVentajas = false;
 
   const guardarCfg = () => M.guardar('consola', cfg);
   const guardarLocal = () => M.guardar('consola-local', local);
@@ -151,6 +152,15 @@
 
   /* --------------------------------------------------- 4. estación */
   function respuesta(id) { return (E.respuestas && E.respuestas[id]) || { intentos: 0, correcta: false, puntos: 0 }; }
+  function resuelto(id) { const r = respuesta(id); return r.correcta || r.intentos >= 2; }
+  async function cargarVentajas() {
+    if (cargandoVentajas) return; cargandoVentajas = true;
+    try {
+      const d = await M.rpc('mdt_ventajas', { p_codigo: cfg.codigo, p_grupo: cfg.grupo });
+      ventajas = (d && d.ventajas) || []; M.guardar('ventajas', ventajas);
+      if (pantalla === 'estacion') { const y = window.scrollY; pEstacion(); window.scrollTo(0, y); }
+    } catch (e) {} finally { cargandoVentajas = false; }
+  }
   function puntoEstado(id) { const r = respuesta(id); return r.correcta ? 'bien' : r.intentos >= 2 ? 'mal' : ''; }
 
   function pEstacion() {
@@ -218,11 +228,26 @@
       return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><p class="suave" style="font-size:13px;margin-bottom:8px">' + M.esc(m.instruccion) + '</p><div class="archivo">'
         + m.items.map(it => '<div class="dato"><small>' + M.esc(it[0]) + '</small><b>' + M.esc(it[1]) + '</b></div>').join('') + '</div></div>';
     }
-    if (m.tipo === 'prevena') {
-      const url = M.urlDe('prevena.html', {});
-      return '<div class="material"><div class="material-cab">App Prevena™</div><section class="hud centro"><p style="margin-bottom:12px">Cualquier tripulante puede abrir la app en su celular (iPhone o Android).</p>'
-        + '<a class="btn primario grande ancho" href="' + M.esc(url) + '" target="_blank" rel="noopener">ABRIR APP PREVENA™ ↗</a>'
-        + '<p class="suave" style="font-size:12px;margin-top:10px;word-break:break-all">' + M.esc(url) + '</p></section></div>';
+    if (m.tipo === 'appPrevena') {
+      const ap = J.appPrevena || {};
+      return '<div class="material"><div class="material-cab">' + M.esc(ap.nombre || 'Aplicación Prevena™') + '</div><section class="hud centro">'
+        + (ap.url
+          ? '<p style="margin-bottom:12px">Cualquier tripulante puede abrirla en su celular (iPhone o Android).</p><a class="btn primario grande ancho" href="' + M.esc(ap.url) + '" target="_blank" rel="noopener">ABRIR APLICACIÓN PREVENA™ ↗</a>'
+          : '<p>El Guía Especialista les indicará cómo abrir la aplicación Prevena™ en sus celulares (iPhone o Android).</p>')
+        + '<p class="suave" style="font-size:13px;margin-top:10px">Completen el paso a paso y vuelvan a esta consola.</p></section></div>';
+    }
+    if (m.tipo === 'ventajas') {
+      const v = ventajas;
+      if (!v) {
+        if (resuelto('5.2')) cargarVentajas();
+        return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><section class="hud centro"><p class="suave">'
+          + (resuelto('5.2') ? 'Cargando la evidencia…' : 'La evidencia aparece cuando el equipo registre el código de la prueba 5.2.') + '</p></section></div>';
+      }
+      return '<div class="material"><div class="material-cab">' + M.esc(m.titulo) + '</div><figure class="imagen-evidencia" role="img" aria-label="' + M.esc(m.titulo) + '">'
+        + '<div class="evidencia-cab">' + M.logo('logo-evidencia') + '<span>Prevena™ · Manejo de incisiones cerradas</span></div>'
+        + '<div class="ventajas">' + v.map((x, i) => '<div class="ventaja" style="animation-delay:' + (i * 0.2) + 's"><span class="sim">' + M.esc(x.simbolo) + '</span><span>' + M.esc(x.texto) + '</span></div>').join('') + '</div>'
+        + '<div class="sello"><small>Hito histórico · Sello de la línea de tiempo</small><div class="simbolos">' + v.map(x => '<span>' + M.esc(x.simbolo) + '</span>').join('') + '</div></div>'
+        + '</figure></div>';
     }
     return '';
   }

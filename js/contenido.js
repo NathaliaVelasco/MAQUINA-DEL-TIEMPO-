@@ -14,6 +14,11 @@ window.CONTENIDO = {
     minutos: 12,
     pistasSegundos: [120, 240, 360],
 
+    /* Aplicación Prevena™ del cliente (desarrollo externo de Solventum).
+       PENDIENTE: pegar aquí el enlace. Si queda vacío, la consola indica
+       que el Guía Especialista les mostrará cómo abrirla. */
+    appPrevena: { url: '', nombre: 'Aplicación Prevena™' },
+
     grupos: [
       { id: 'davinci', nombre: 'Alquimistas de Da Vinci', color: '#05dd4d', simbolo: '⚡', enfoque: 'Guiados por el dominio absoluto de la anatomía y la geometría de la pared abdominal.' },
       { id: 'verne',   nombre: 'Exploradores de Verne',   color: '#c98a4b', simbolo: '⚙', enfoque: 'Inspirados por la ingeniería fantástica y los viajes hacia las profundidades del tejido visceral.' },
@@ -346,7 +351,7 @@ window.CONTENIDO = {
           mision: [
             ['Evaluar el riesgo de la herida cerrada', 'Analicen las características de la línea de incisión tras la aproximación fascial de alta tensión. Consulten el Archivo Técnico Prevena™ de esta pantalla.'],
             ['Descifrar el código', 'Dígitos 1, 2 y 3: magnitud absoluta de la presión negativa continua prescrita para el manejo de la incisión. Dígito 4: número de días continuos de terapia que entrega la unidad portátil Prevena™.'],
-            ['Desbloquear y colocar el dispositivo', 'Ingresen la combinación en el candado para acceder a la unidad Prevena™ y realicen el ensamble sobre el modelo de la incisión cerrada. Anoten el código en la bitácora: lo necesitarán para activar la app Prevena™.']
+            ['Desbloquear y colocar el dispositivo', 'Ingresen la combinación en el candado para acceder a la unidad Prevena™ y realicen el ensamble sobre el modelo de la incisión cerrada. Anoten el código en la bitácora.']
           ],
           atencion: 'Anticiparse al riesgo cambia los resultados. La terapia de presión negativa incisional ayuda a reducir complicaciones de la herida y a proteger la recuperación del paciente.',
           pantalla: [
@@ -361,33 +366,21 @@ window.CONTENIDO = {
           situacionTitulo: 'Situación clínica en quirófano',
           situacion: [
             ['Escenario', 'El sistema Prevena™ ha sido activado y posicionado sobre la herida de laparotomía cerrada de alta tensión.'],
-            ['Objetivo de la misión', 'Activar la app Prevena™, ejecutar la secuencia paso a paso de colocación digital y consolidar los 6 beneficios clínicos demostrados que reducen la morbilidad de la incisión de alto riesgo.']
+            ['Objetivo de la misión', 'Activar la aplicación Prevena™, ejecutar la secuencia paso a paso de colocación digital y consolidar los 6 beneficios clínicos demostrados que reducen la morbilidad de la incisión de alto riesgo.']
           ],
           mision: [
-            ['Desbloquear la app Prevena™', 'Abran la app Prevena™ en uno o varios celulares de la tripulación e ingresen el código de activación de la prueba 5.2. Sigan las instrucciones en pantalla: preparación del lecho incisional, posicionamiento del apósito, sellado de bordes y activación del vacío.'],
-            ['Consolidar las ventajas clínicas', 'Al completar el flujo, la app desplegará la evidencia sobre el manejo de la incisión de laparotomía. Verifiquen las ventajas clave alcanzadas y registren sus símbolos en la bitácora.']
+            ['Abrir la aplicación Prevena™', 'Abran la aplicación Prevena™ de Solventum en uno o varios celulares de la tripulación (iPhone o Android) y sigan el paso a paso: preparación del lecho incisional, posicionamiento del apósito, sellado de bordes y activación del vacío.'],
+            ['Consolidar las ventajas clínicas', 'Al completar el flujo, revisen en esta consola la evidencia de las ventajas de Prevena™ en la incisión de laparotomía. Cuenten las ventajas verificadas y registren sus símbolos, en orden, en la bitácora.']
           ],
           atencion: 'No esperen la complicación para actuar. En laparotomías de alta tensión, la protección de la incisión es una decisión crítica desde el cierre.',
-          pantalla: [{ tipo: 'prevena' }],
-          codigo: { pregunta: 'Tras completar el paso a paso en la app Prevena™ y revisar la evidencia clínica: ¿cuál es la cantidad total de beneficios clínicos verificados que aporta la terapia Prevena™ sobre la incisión de alto riesgo?', formato: 'Únicamente el número de 1 dígito', placeholder: '_' },
+          pantalla: [{ tipo: 'appPrevena' }, { tipo: 'ventajas', titulo: 'Evidencia · Ventajas de Prevena™ en la incisión de laparotomía' }],
+          codigo: { pregunta: 'Tras completar el paso a paso en la aplicación Prevena™ y revisar la evidencia clínica: ¿cuál es la cantidad total de beneficios clínicos verificados que aporta la terapia Prevena™ sobre la incisión de alto riesgo?', formato: 'Únicamente el número de 1 dígito', placeholder: '_' },
           pistas: []
         }
       ],
-      clave: { id: '5.4', titulo: 'Clave final · Hito histórico', pregunta: 'Unan, en el orden en que aparecen en la app Prevena™, los símbolos de las ventajas clínicas. Esa secuencia es el hito histórico que sella la línea de tiempo.', formato: 'Letras y números juntos, sin espacios', placeholder: '_ _ _ _ _ _' },
+      clave: { id: '5.4', titulo: 'Clave final · Hito histórico', pregunta: 'Unan, en el orden en que aparecen en la imagen de evidencia de la prueba 5.3, los símbolos de las ventajas clínicas. Esa secuencia es el hito histórico que sella la línea de tiempo.', formato: 'Letras y números juntos, sin espacios', placeholder: '_ _ _ _ _ _' },
       desbloqueo: { titulo: '¡LÍNEA DE TIEMPO SELLADA!', texto: 'Cierre fascial definitivo y protección de la incisión validados.' },
       cierre: '¡Felicidades, Cronocirujanos! Han completado con éxito la línea de tiempo. Tras asegurar el cierre de la cavidad al verificar que la variación de presión en la vía aérea era menor a 4 mmHg y no requerir más lavados, protegieron la incisión con Prevena™. A -125 mmHg por 7 días, redujeron la tensión lateral, aislaron la contaminación externa y previnieron la infección del sitio quirúrgico y la hernia incisional. ¡El paciente de 38 años ha recuperado su futuro!'
     }
-  ],
-
-  /* App Prevena™ (prevena.html). BORRADOR para validación de Solventum. */
-  prevena: {
-    pasos: [
-      { titulo: 'Preparar el lecho incisional', texto: 'Limpien y sequen la piel alrededor de la incisión cerrada. La piel debe estar libre de vello, humedad y residuos para lograr un sellado hermético.' },
-      { titulo: 'Posicionar el apósito', texto: 'Retiren el respaldo del apósito y céntrenlo sobre la línea de sutura, de modo que la espuma cubra toda la incisión.' },
-      { titulo: 'Sellar los bordes', texto: 'Presionen suavemente los bordes del adhesivo sobre la piel, sin arrugas, hasta lograr un sellado completo.' },
-      { titulo: 'Conectar la unidad', texto: 'Unan la tubuladura del apósito a la unidad portátil Prevena™.' },
-      { titulo: 'Activar el vacío', texto: 'Enciendan la unidad: la terapia inicia en presión negativa continua de -125 mmHg.' },
-      { titulo: 'Verificar el sellado', texto: 'El apósito se comprime y adquiere un aspecto arrugado. Sin alarma de fuga, la terapia está activa.' }
-    ]
-  }
+  ]
 };

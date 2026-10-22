@@ -54,7 +54,6 @@
       + '<footer class="portico-pie">'
       + '<div class="qr">' + qrSVG(base + 'kit.html') + '<div><b>Kit de tripulación</b><span>Todos: regístrense aquí</span></div></div>'
       + '<div class="qr">' + qrSVG(base + 'consola.html') + '<div><b>Consola del equipo</b><span>Solo el Comandante de Misión</span></div></div>'
-      + '<div class="qr">' + qrSVG(base + 'prevena.html') + '<div><b>App Prevena™</b><span>Estación 5</span></div></div>'
       + '</footer>'
       + '<button class="btn fantasma pequeno admin-btn" data-a="admin">⚙ FACILITADOR</button>'
       + '</main>';
