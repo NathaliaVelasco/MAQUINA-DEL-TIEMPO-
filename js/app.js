@@ -1,36 +1,33 @@
 /* ==========================================================================
-   MÁQUINA DEL TIEMPO · Plataforma del Facilitador Digital
+   MÁQUINA DEL TIEMPO · Consola de misión (celular de cada participante)
    Metodología y diseño del juego: Nathalia Velasco · Simoné
-   La plataforma asume el rol del Guía Especialista: guía cada paso, libera
-   información, valida códigos, da pistas por tiempo y cierra con debriefing.
+   --------------------------------------------------------------------------
+   - Cada participante se registra en su celular (nombre, profesión, grupo, rol).
+   - El Comandante de Misión conduce: inicia estaciones y digita los códigos.
+   - Los demás celulares del grupo ven lo mismo en vivo.
+   - 12:00 de juego por estación + 30 s de gracia. A las 12:30 se cierra sola.
    ========================================================================== */
 (function () {
   'use strict';
 
-  const C = window.CONTENIDO;
-  const J = C.juego;
-  const SEG_ESTACION = J.minutosPorEstacion * 60;
-  const CLAVE = 'mdt-partida-v1';
+  const C = window.CONTENIDO, J = C.juego, D = window.DATOS, H = window.HUELLAS;
   const app = document.getElementById('app');
-
-  /* ---------------------------------------------------------------- estado */
-  let S = cargar() || nuevo();
-  function nuevo() {
-    return { pantalla: 'inicio', equipo: '', grupo: '', intro: 0, hechas: [], resultados: {}, actual: null, voz: true };
-  }
-  function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {} }
-  function cargar() {
-    try { const t = localStorage.getItem(CLAVE); return t ? JSON.parse(t) : null; } catch (e) { return null; }
-  }
+  const SEG_OFICIAL = J.minutos * 60, SEG_CIERRE = J.segundosCierre;
+  const CLAVE_YO = 'mdt-yo-v2';
 
   /* ------------------------------------------------------------ utilidades */
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, '');
-  const descifrar = b => { try { return atob(b).split('').reverse().join(''); } catch (e) { return ''; } };
+  const mayus = s => String(s || '').toUpperCase().replace(/\s+/g, ' ').trimStart();
+  const revelar = c => { try { return atob(H[c].r).split('').reverse().join(''); } catch (e) { return ''; } };
   const mmss = seg => { const n = Math.max(0, Math.ceil(seg)); return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); };
-  const ahora = () => Date.now();
-  const estacion = id => C.estaciones.find(e => e.id === id);
-  const grupo = () => J.grupos.find(g => g.id === S.grupo) || { nombre: '', color: '#c8a25a', simbolo: '◆' };
+  const grupoDe = id => J.grupos.find(g => g.id === id) || J.grupos[0];
+  const rolDe = id => J.roles.find(r => r.id === id) || { nombre: id };
+  /* En modo demo cada pestaña es un jugador distinto (sessionStorage); con
+     base de datos real, el celular recuerda a su jugador (localStorage). */
+  function almacen() { try { return D.modo === 'demo' ? sessionStorage : localStorage; } catch (e) { return null; } }
+  function leerYo() { try { return JSON.parse(almacen().getItem(CLAVE_YO) || 'null'); } catch (e) { return null; } }
+  function guardarYo() { try { if (YO) almacen().setItem(CLAVE_YO, JSON.stringify(YO)); else almacen().removeItem(CLAVE_YO); } catch (e) {} }
 
   async function huella(codigo, texto) {
     const datos = new TextEncoder().encode('MDT|' + codigo + '|' + norm(texto));
@@ -38,7 +35,37 @@
       const buf = await crypto.subtle.digest('SHA-256', datos);
       return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
-    return sha256Respaldo(datos);
+    return window.sha256Respaldo(datos);
+  }
+
+  /* ---------------------------------------------------------------- estado */
+  let YO = leerYo();                 /* {id, grupo, rol, nombre, profesion, voz} */
+  let G = {};                        /* estado compartido del grupo */
+  let MIEMBROS = [];                 /* participantes del grupo */
+  let TODOS = [];                    /* todos los participantes (registro) */
+  let OFFSET = 0;                    /* reloj del servidor − reloj local */
+  let ESCRIBIENDO = false;
+  const ahora = () => Date.now() + OFFSET;
+
+  function estacionIdx() { return G.est || 0; }
+  function estacion() { return C.estaciones[estacionIdx()]; }
+  function pasosDe(e) { return e.pruebas.length + 1; }           /* pruebas + clave */
+  function codigoDePaso(e, i) { return i < e.pruebas.length ? e.pruebas[i].codigo : e.clave; }
+  function fase() { return G.fase || 'portico'; }
+  function soyMando() {
+    if (!YO) return false;
+    if (G.control) return G.control === YO.id;
+    return YO.rol === 'COMANDANTE';
+  }
+  function transcurrido() { return G.inicio ? (ahora() - G.inicio) / 1000 : 0; }
+
+  async function escribir(cambios) {
+    G = Object.assign({}, G, cambios, { v: (G.v || 0) + 1 });
+    ESCRIBIENDO = true;
+    render();
+    try { await D.guardarGrupo(YO.grupo, G); }
+    catch (e) { aviso(D.mensaje(e)); }
+    finally { ESCRIBIENDO = false; }
   }
 
   /* ----------------------------------------------------------------- audio */
@@ -48,14 +75,11 @@
     if (ctx && ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
-  function tono(freq, dur, tipo, vol, retraso) {
-    const a = audio(); if (!a || !S.voz) return;
-    const t0 = a.currentTime + (retraso || 0);
-    const o = a.createOscillator(), g = a.createGain();
-    o.type = tipo || 'sine'; o.frequency.value = freq;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol || 0.15, t0 + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  function tono(f, dur, tipo, vol, ret) {
+    const a = audio(); if (!a || !YO || !YO.voz) return;
+    const t0 = a.currentTime + (ret || 0), o = a.createOscillator(), g = a.createGain();
+    o.type = tipo || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol || 0.15, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.05);
   }
   const SFX = {
@@ -63,469 +87,639 @@
     error() { tono(140, 0.35, 'sawtooth', 0.12); tono(110, 0.4, 'sawtooth', 0.1, 0.08); },
     paso() { tono(520, 0.12, 'sine', 0.1); },
     tic() { tono(1400, 0.04, 'square', 0.04); },
-    candado() { tono(300, 0.08, 'square', 0.12); tono(420, 0.08, 'square', 0.12, 0.09); tono(880, 0.4, 'triangle', 0.16, 0.2); },
-    monitor(n) { for (let i = 0; i < n; i++) tono(1046, 0.09, 'sine', 0.09, i * (60 / 130)); }
+    candado() { tono(300, 0.08, 'square', 0.12); tono(420, 0.08, 'square', 0.12, 0.09); tono(880, 0.4, 'triangle', 0.16, 0.2); }
   };
 
-  /* ------------------------------------------------------------------ voz */
-  let vozElegida = null;
+  /* ------------------------------------------------------------------- voz
+     Voz automática del dispositivo. Se prefiere una voz MASCULINA de español
+     latinoamericano; si el equipo no tiene ninguna, se usa la más cercana con
+     un tono más grave. */
+  let VOZ = null, GRAVE = false;
+  const MASC = /(juan|diego|jorge|carlos|pablo|ra[uú]l|gerardo|andr[eé]s|enrique|[aá]lvaro|jos[eé]|miguel|eddy|reed|rocko|grandpa|male|hombre|masculin)/i;
+  const FEM = /(paulina|m[oó]nica|sabina|helena|laura|elvira|dalia|lupe|marisol|isabela|paloma|francisca|soledad|ang[eé]lica|female|mujer|femenin|flo|sandy|shelley|grandma)/i;
+  const LATAM = /es[-_](MX|US|419|CO|AR|CL|PE|VE|EC|UY|BO|PY|CR|PA|DO|GT|HN|SV|NI|PR|CU)/i;
   function elegirVoz() {
     if (!('speechSynthesis' in window)) return;
-    const v = speechSynthesis.getVoices().filter(x => /^es/i.test(x.lang));
-    vozElegida = v.find(x => /es-(CO|MX|US|419)/i.test(x.lang)) || v.find(x => /es-ES/i.test(x.lang)) || v[0] || null;
+    const vs = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
+    let mejor = null, pts = -99;
+    vs.forEach(v => {
+      let p = 0;
+      if (MASC.test(v.name)) p += 5;
+      if (FEM.test(v.name)) p -= 5;
+      if (LATAM.test(v.lang)) p += 2;
+      if (v.localService) p += 0.5;
+      if (p > pts) { pts = p; mejor = v; }
+    });
+    VOZ = mejor; GRAVE = !(mejor && MASC.test(mejor.name));
   }
   if ('speechSynthesis' in window) { elegirVoz(); speechSynthesis.onvoiceschanged = elegirVoz; }
   function decir(texto) {
-    if (!S.voz || !('speechSynthesis' in window) || !texto) return;
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = vozElegida ? vozElegida.lang : 'es-CO';
-    if (vozElegida) u.voice = vozElegida;
-    u.rate = 0.98; u.pitch = 0.9;
-    speechSynthesis.speak(u);
+    if (!YO || !YO.voz || !('speechSynthesis' in window) || !texto) return;
+    try {
+      speechSynthesis.cancel();
+      const partes = String(texto).match(/[^.!?…]+[.!?…]*/g) || [texto];   /* frases cortas: iOS corta textos largos */
+      partes.forEach(fr => {
+        const u = new SpeechSynthesisUtterance(fr.trim());
+        u.lang = VOZ ? VOZ.lang : 'es-MX';
+        if (VOZ) u.voice = VOZ;
+        u.rate = 1; u.pitch = GRAVE ? 0.7 : 0.95;
+        speechSynthesis.speak(u);
+      });
+    } catch (e) {}
   }
-  function callar() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  let vozLista = false;
+  function desbloquearVoz() {   /* iOS solo habla si la primera frase nace de un toque */
+    if (vozLista || !('speechSynthesis' in window)) return;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); vozLista = true; } catch (e) {}
+  }
+  function callar() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} }
 
-  /* --------------------------------------------------------------- render */
-  function pinta(html) { app.innerHTML = html; window.scrollTo(0, 0); }
+  /* ------------------------------------------------------------- avisos */
+  let avisoId = null;
+  function aviso(txt) {
+    let el = document.getElementById('aviso');
+    if (!el) { el = document.createElement('div'); el.id = 'aviso'; el.className = 'aviso-flotante'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = txt; el.classList.add('on');
+    clearTimeout(avisoId); avisoId = setTimeout(() => el.classList.remove('on'), 4200);
+  }
 
-  function barra(opc) {
-    const g = grupo();
-    const a = S.actual;
+  /* ---------------------------------------------------------------- render */
+  function pinta(html) {
+    const y = window.scrollY, misma = app.getAttribute('data-clave') === claveVista();
+    app.innerHTML = html;
+    app.setAttribute('data-clave', claveVista());
+    if (!misma) window.scrollTo(0, 0); else window.scrollTo(0, y);
+  }
+  function claveVista() {
+    if (!YO) return 'registro';
+    return [fase(), G.est || 0, G.prueba || 0, G.vista || ''].join('|');
+  }
+
+  function barra(conReloj) {
+    const g = grupoDe(YO.grupo), e = estacion();
+    const enJuego = fase() === 'juego';
     return '<header class="barra">'
-      + '<div class="barra-marca"><img src="img/solventum-logo.png" alt="Solventum"><span class="divisor"></span><div><b>' + esc(J.titulo) + '</b><small>' + esc(J.subtitulo) + '</small></div></div>'
-      + (S.equipo ? '<div class="barra-equipo" style="--g:' + g.color + '"><span></span>' + esc(S.equipo) + '</div>' : '')
-      + (opc && opc.reloj && a ? '<div class="reloj" id="reloj">' + mmss(restante()) + '</div>' : '')
-      + (opc && opc.puntos ? '<div class="barra-puntos"><small>PUNTOS</small><b>' + totalPuntos() + '</b></div>' : '')
-      + '<button class="btn-icono" data-a="voz" aria-label="Activar o silenciar sonido">' + (S.voz ? 'SONIDO ON' : 'SONIDO OFF') + '</button>'
+      + '<div class="barra-marca"><img src="img/solventum-logo.png" alt="Solventum"></div>'
+      + '<div class="barra-equipo" style="--g:' + g.color + '"><span></span><b>' + esc(g.nombre) + '</b><small>' + esc(rolDe(YO.rol).nombre) + (soyMando() ? ' · CONSOLA' : '') + '</small></div>'
+      + (conReloj && enJuego ? '<div class="reloj" id="reloj"><small>E' + e.numero + '</small><b>' + relojTexto() + '</b></div>' : '')
+      + '<button class="btn-icono" data-a="voz" aria-label="Activar o silenciar la voz">' + (YO.voz ? 'VOZ ON' : 'VOZ OFF') + '</button>'
       + '</header>';
+  }
+  function relojTexto() {
+    const t = transcurrido();
+    return t <= SEG_OFICIAL ? mmss(SEG_OFICIAL - t) : '+' + mmss(SEG_CIERRE - t);
   }
 
   function render() {
-    detenerTicker();
-    const p = S.pantalla;
-    if (p === 'inicio') return pInicio();
-    if (p === 'intro') return pIntro();
-    if (p === 'mapa') return pMapa();
-    if (p === 'briefing') return pBriefing();
-    if (p === 'paso') return pPaso();
-    if (p === 'cierre') return pCierre();
-    pInicio();
+    if (!YO) return pRegistro();
+    const f = fase();
+    if (f === 'portico') return pPortico();
+    if (f === 'antesala') return pAntesala();
+    if (f === 'juego') return pJuego();
+    if (f === 'retro') return pRetro();
+    if (f === 'fin') return pFin();
+    pPortico();
   }
 
-  /* ---- Inicio: registro del equipo ---- */
-  function pInicio() {
-    const opciones = J.grupos.map(g =>
-      '<button class="grupo ' + (S.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '">'
-      + '<span class="grupo-simbolo">' + g.simbolo + '</span><span>' + esc(g.nombre) + '</span></button>').join('');
+  /* ===================================================== 0 · REGISTRO */
+  let REG = { nombre: '', profesion: '', grupo: '', rol: '', autoriza: false };
+  function pRegistro() {
+    const conteo = g => TODOS.filter(p => p.grupo === g).length;
+    const ocupado = (g, r) => {
+      const n = TODOS.filter(p => p.grupo === g && p.rol === r).length;
+      return n >= rolDe(r).cupo;
+    };
+    const grupos = J.grupos.map(g => {
+      const n = conteo(g.id), lleno = n >= 7;
+      return '<button class="grupo ' + (REG.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '" ' + (lleno ? 'disabled' : '') + '>'
+        + '<span class="grupo-simbolo">' + g.simbolo + '</span><span class="grupo-nombre">' + esc(g.nombre) + '</span><span class="grupo-cupo">' + n + '/7</span></button>';
+    }).join('');
+    const roles = REG.grupo ? J.roles.map(r => {
+      const lleno = ocupado(REG.grupo, r.id);
+      return '<button class="rol-op ' + (REG.rol === r.id ? 'sel' : '') + '" data-rol="' + r.id + '" ' + (lleno ? 'disabled' : '') + '>'
+        + '<b>' + esc(r.nombre) + '</b><small>' + (lleno ? 'Ocupado' : esc(r.subtitulo)) + '</small></button>';
+    }).join('') : '<p class="nota">Primero elijan su grupo.</p>';
     pinta('<main class="portal">'
       + '<div class="portal-anillo" aria-hidden="true"><i></i><i></i><i></i></div>'
-      + '<section class="portal-caja hud">' + '<img class="portal-logo" src="img/solventum-logo.png" alt="Solventum">'
+      + '<section class="portal-caja hud">'
+      + '<img class="portal-logo" src="img/solventum-logo.png" alt="Solventum">'
       + '<p class="sobretitulo">Laboratorio quirúrgico de alta inmersión</p>'
       + '<h1>' + esc(J.titulo) + '</h1>'
       + '<p class="codigo-juego">' + esc(J.subtitulo) + '</p>'
-      + '<label class="campo"><span>Nombre del equipo</span><input id="equipo" maxlength="40" autocomplete="off" value="' + esc(S.equipo) + '" placeholder="Escriban el nombre de su tripulación"></label>'
-      + '<div class="campo"><span>Su grupo</span><div class="grupos">' + opciones + '</div></div>'
+      + '<p class="registro-intro">Registro del Cronocirujano</p>'
+      + '<label class="campo"><span>Nombre completo</span><input id="nombre" maxlength="80" autocomplete="name" autocapitalize="characters" value="' + esc(REG.nombre) + '" placeholder="NOMBRES Y APELLIDOS"></label>'
+      + '<label class="campo"><span>Profesión</span><input id="profesion" maxlength="60" autocapitalize="characters" value="' + esc(REG.profesion) + '" placeholder="EJ: CIRUJANO GENERAL"></label>'
+      + '<div class="campo"><span>Grupo</span><div class="grupos">' + grupos + '</div></div>'
+      + '<div class="campo"><span>Rol en la misión</span><div class="roles-op">' + roles + '</div></div>'
+      + '<label class="autoriza"><input type="checkbox" id="autoriza" ' + (REG.autoriza ? 'checked' : '') + '><span>' + esc(J.autorizacion) + '</span></label>'
       + '<p class="error" id="err"></p>'
       + '<button class="btn primario grande" data-a="registrar">CRUZAR EL PORTAL →</button>'
+      + (D.modo === 'demo' ? '<p class="modo-demo">MODO DEMO · los datos solo se guardan en este navegador</p>' : '')
       + '</section>'
       + '<footer class="creditos">Metodología y diseño del juego: Nathalia Velasco · Simoné</footer>'
       + '</main>');
   }
-
-  /* ---- Intro: el Guardián de la Línea del Tiempo ---- */
-  function pIntro() {
-    const i = Math.min(S.intro, J.intro.length - 1);
-    const ultimo = i === J.intro.length - 1;
-    pinta('<div class="pantalla">' + barra({})
-      + '<main class="intro">'
-      + guardian('El Guardián de la Línea del Tiempo')
-      + '<p class="intro-texto">' + esc(J.intro[i]) + '</p>'
-      + '<div class="puntos-intro">' + J.intro.map((_, k) => '<i class="' + (k <= i ? 'on' : '') + '"></i>').join('') + '</div>'
-      + (i === 2 ? rolesHTML() : '')
-      + '<div class="acciones"><button class="btn fantasma" data-a="introSaltar">Saltar introducción</button>'
-      + '<button class="btn primario" data-a="introSig">' + (ultimo ? 'ABRIR LA LÍNEA DE TIEMPO →' : 'CONTINUAR →') + '</button></div>'
-      + '</main></div>');
-    decir(J.intro[i]);
+  function leerCamposRegistro() {
+    const n = document.getElementById('nombre'), p = document.getElementById('profesion'), a = document.getElementById('autoriza');
+    if (n) REG.nombre = mayus(n.value);
+    if (p) REG.profesion = mayus(p.value);
+    if (a) REG.autoriza = a.checked;
   }
-  function rolesHTML() {
-    return '<div class="roles">' + J.roles.map(r => '<div class="rol"><b>' + esc(r.nombre) + '</b><span>' + esc(r.mision) + '</span></div>').join('') + '</div>';
+  async function registrar() {
+    leerCamposRegistro();
+    const err = document.getElementById('err');
+    const nombre = REG.nombre.trim(), profesion = REG.profesion.trim();
+    if (nombre.split(' ').filter(Boolean).length < 2) { err.textContent = 'Escriban su nombre completo (nombres y apellidos).'; return; }
+    if (!profesion) { err.textContent = 'Escriban su profesión.'; return; }
+    if (!REG.grupo) { err.textContent = 'Elijan su grupo.'; return; }
+    if (!REG.rol) { err.textContent = 'Elijan su rol en la misión.'; return; }
+    if (!REG.autoriza) { err.textContent = 'Para participar deben aceptar la autorización de tratamiento de datos.'; return; }
+    err.textContent = 'Registrando…';
+    try {
+      const fila = await D.registrar({ grupo: REG.grupo, nombre: nombre, profesion: profesion, rol: REG.rol, autoriza: true });
+      YO = { id: fila.id, grupo: REG.grupo, rol: REG.rol, nombre: nombre, profesion: profesion, voz: REG.rol === 'COMANDANTE' };
+      guardarYo(); SFX.ok();
+      await sincronizar(true);
+      render();
+    } catch (e) {
+      err.textContent = D.mensaje(e);
+      await cargarTodos(); pRegistro();
+      const e2 = document.getElementById('err'); if (e2) e2.textContent = D.mensaje(e);
+    }
+  }
+
+  /* ===================================================== 1 · PÓRTICO */
+  function tripulacionHTML() {
+    const orden = ['PILOTO', 'COPILOTO', 'COMANDANTE', 'TRIPULANTE'];
+    const filas = MIEMBROS.slice().sort((a, b) => orden.indexOf(a.rol) - orden.indexOf(b.rol)).map(m =>
+      '<li class="' + (m.id === YO.id ? 'yo' : '') + '"><span class="rol-chip">' + esc(rolDe(m.rol).nombre) + '</span><b>' + esc(m.nombre) + '</b><small>' + esc(m.profesion) + '</small></li>').join('');
+    return '<section class="tripulacion hud"><header><h3>Tripulación</h3><span>' + MIEMBROS.length + ' / 7</span></header><ul>' + filas + '</ul></section>';
+  }
+  function pPortico() {
+    const g = grupoDe(YO.grupo), rol = rolDe(YO.rol);
+    const hayMando = soyMando() || MIEMBROS.some(m => m.rol === 'COMANDANTE') || G.control;
+    pinta('<div class="pantalla">' + barra(false)
+      + '<main class="portico">'
+      + '<section class="bienvenida">'
+      + guardian('El Guardián de la Línea del Tiempo')
+      + J.intro.map(p => '<p class="intro-texto">' + esc(p) + '</p>').join('')
+      + '<button class="btn fantasma pequeno" data-a="repetirIntro">Escuchar de nuevo</button>'
+      + '</section>'
+      + '<section class="credencial hud" style="--g:' + g.color + '">'
+      + '<p class="sobretitulo">Credencial de misión</p><h2>' + esc(rol.nombre) + '</h2><p class="sub">' + esc(rol.subtitulo) + '</p>'
+      + '<p class="credencial-nombre">' + esc(YO.nombre) + '</p><p class="credencial-grupo"><span>' + g.simbolo + '</span> ' + esc(g.nombre) + '</p>'
+      + '<ul class="mision">' + rol.mision.map(m => '<li>' + esc(m) + '</li>').join('') + '</ul></section>'
+      + tripulacionHTML()
+      + '<section class="reglas hud"><h3>Reglas del laberinto</h3><ul>' + J.reglas.map(r => '<li>' + esc(r) + '</li>').join('') + '</ul>'
+      + '<p class="arranque">' + esc(J.arranque) + '</p></section>'
+      + (soyMando()
+        ? '<div class="acciones centro"><button class="btn primario grande" data-a="antesala">CRUZAR EL PORTAL · ESTACIÓN 1 →</button></div>'
+        : '<p class="espera">' + (hayMando ? 'El Comandante de Misión abrirá la Estación 1 cuando el Guía Especialista lo indique.' : 'Falta registrar al Comandante de Misión de este grupo.') + '</p>')
+      + pieMando()
+      + '</main></div>');
   }
   function guardian(nombre) {
     return '<div class="guardian"><div class="guardian-reloj" aria-hidden="true"><i class="h"></i><i class="m"></i></div><span>' + esc(nombre) + '</span></div>';
   }
-
-  /* ---- Mapa: la línea de vida del paciente ---- */
-  function pMapa() {
-    const nodos = C.estaciones.map((e, k) => {
-      const hecha = S.hechas.indexOf(e.id) >= 0;
-      const previaOk = k === 0 || S.hechas.indexOf(C.estaciones[k - 1].id) >= 0;
-      let estado = hecha ? 'hecha' : (previaOk ? (e.enConstruccion ? 'construccion' : 'disponible') : 'bloqueada');
-      const r = S.resultados[e.id];
-      const etiqueta = { hecha: (r ? r.total + ' / 20 pts' : 'Restaurado'), disponible: 'ENTRAR', construccion: 'En construcción', bloqueada: 'Bloqueada' }[estado];
-      return '<li class="nodo ' + estado + '">'
-        + '<button ' + (estado === 'disponible' ? 'data-a="entrar" data-est="' + e.id + '"' : 'disabled') + '>'
-        + '<span class="nodo-num">' + e.numero + '</span>'
-        + '<span class="nodo-nombre">' + esc(e.nombre) + '</span>'
-        + '<span class="nodo-sub">' + esc(e.nodoLinea) + '</span>'
-        + '<span class="nodo-estado">' + etiqueta + '</span>'
-        + '</button></li>';
-    }).join('');
-    const sig = C.estaciones.find((e, k) => S.hechas.indexOf(e.id) < 0);
-    pinta('<div class="pantalla">' + barra({ puntos: true })
-      + '<main class="mapa">'
-      + '<p class="sobretitulo">El laberinto temporal</p>'
-      + '<h2>Línea de vida del paciente</h2>'
-      + '<p class="mapa-intro">Cinco cámaras en orden estricto. Doce minutos en cada una. Cada cámara superada restaura un nodo de su línea de vida a un año.</p>'
-      + '<ol class="linea">' + nodos + '</ol>'
-      + (sig && sig.enConstruccion && S.hechas.length ? '<p class="aviso">La siguiente cámara aún está en construcción en este prototipo.</p>' : '')
-      + '<div class="mapa-pie"><button class="btn fantasma pequeno" data-a="reiniciar" id="btnReiniciar">Reiniciar partida</button></div>'
-      + '</main></div>');
+  let confirmarMando = 0;
+  function pieMando() {
+    if (soyMando()) return '';
+    return '<footer class="pie-mando"><button class="btn fantasma pequeno" data-a="tomarMando">Tomar el mando de la consola</button>'
+      + '<small>Solo si el celular del Comandante falló o se quedó sin batería.</small></footer>';
   }
 
-  /* ---- Briefing de la cámara ---- */
-  function pBriefing() {
-    const e = estacion(S.actual.est);
-    pinta('<div class="pantalla">' + barra({})
-      + '<main class="briefing">'
-      + '<p class="sobretitulo">Cámara ' + e.numero + ' · ' + esc(e.lugar) + '</p>'
+  /* ===================================================== ANTESALA de estación */
+  function pAntesala() {
+    const e = estacion();
+    pinta('<div class="pantalla">' + barra(false)
+      + '<main class="antesala">'
+      + lineaDeVida()
+      + '<p class="sobretitulo">Estación ' + e.numero + ' de 5</p>'
       + '<h2>' + esc(e.nombre) + '</h2><p class="sub">' + esc(e.subtitulo) + '</p>'
-      + '<article class="tarjeta-clinica"><header>' + esc(e.briefing.titulo) + '</header>'
-      + e.briefing.texto.map(t => '<p>' + esc(t) + '</p>').join('') + '</article>'
-      + '<p class="briefing-nota">Al pulsar INICIAR empiezan los ' + J.minutosPorEstacion + ' minutos. El Comandante opera esta tablet; el Copiloto anota en la bitácora.</p>'
-      + '<button class="btn primario grande" data-a="iniciar">INICIAR CÁMARA · ' + mmss(SEG_ESTACION) + '</button>'
+      + '<p class="concepto">' + esc(e.concepto) + '</p>'
+      + (e.ingreso ? '<article class="tarjeta-clinica"><header>' + esc(e.ingreso.titulo) + '</header>' + e.ingreso.texto.map(t => '<p>' + esc(t) + '</p>').join('') + '</article>' : '')
+      + '<p class="nota-guia">Guía Especialista: entreguen al grupo el material de la Estación ' + e.numero + '.</p>'
+      + (soyMando()
+        ? '<div class="acciones centro"><button class="btn primario grande" data-a="iniciar">INICIAR ESTACIÓN ' + e.numero + ' · 12:00</button></div>'
+        : '<p class="espera">El Comandante iniciará el reloj cuando tengan el material.</p>')
+      + pieMando()
       + '</main></div>');
-    decir('Cámara ' + e.numero + ': ' + e.nombre + '. ' + e.briefing.texto.join(' '));
+  }
+  function lineaDeVida() {
+    const res = G.res || {};
+    return '<ol class="linea-mini">' + C.estaciones.map((e, k) => {
+      const r = res[e.id], actual = k === estacionIdx() && fase() !== 'fin';
+      return '<li class="' + (r ? 'hecha' : actual ? 'actual' : '') + '"><span>' + e.numero + '</span><small>' + (r ? r.total + ' pts' : esc(e.nombre)) + '</small></li>';
+    }).join('') + '</ol>';
   }
 
-  /* ---- Paso a paso de la cámara ---- */
-  function pPaso() {
-    const a = S.actual, e = estacion(a.est), paso = e.pasos[a.paso];
-    const ruta = '<ol class="ruta">' + e.pasos.map((p, k) =>
-      '<li class="' + (k < a.paso ? 'ok' : k === a.paso ? 'hoy' : '') + (p.tipo === 'codigo' ? ' cod' : '') + '">'
-      + '<span class="ruta-marca">' + (k < a.paso ? '✓' : (p.tipo === 'codigo' ? '#' : k + 1)) + '</span>'
-      + '<span class="ruta-texto">' + esc(p.tipo === 'codigo' ? 'Código ' + p.codigo : p.titulo) + '</span></li>').join('') + '</ol>';
-    const progreso = '<div class="progreso" aria-hidden="true">' + e.pasos.map((p, k) => '<i class="' + (k < a.paso ? 'ok' : k === a.paso ? 'hoy' : '') + '"></i>').join('') + '</div>';
-
-    pinta('<div class="pantalla">' + barra({ reloj: true, puntos: false })
-      + '<main class="camara">'
-      + '<aside class="col-ruta"><p class="sobretitulo">Cámara ' + e.numero + '</p><h3>' + esc(e.nombre) + '</h3>' + ruta + '</aside>'
-      + '<section class="col-paso">' + progreso
-      + '<div class="paso-cab"><span class="paso-num">PASO ' + (a.paso + 1) + ' DE ' + e.pasos.length + '</span>'
-      + (paso.rol ? '<span class="quien">' + esc(paso.rol) + '</span>' : '') + '</div>'
-      + cuerpoPaso(e, paso)
-      + '</section>'
-      + '<aside class="col-guia" id="guia">' + guiaHTML(paso) + '</aside>'
+  /* ===================================================== JUEGO */
+  function pJuego() {
+    const e = estacion(), i = G.prueba || 0, total = pasosDe(e);
+    const esClave = i >= e.pruebas.length;
+    const progreso = '<div class="progreso" aria-label="Avance de la estación">' + Array.from({ length: total }, (_, k) =>
+      '<i class="' + (k < i ? 'ok' : k === i ? 'hoy' : '') + '"></i>').join('') + '</div>';
+    let cuerpo;
+    if (esClave) cuerpo = pantallaClave(e);
+    else if (G.vista === 'revela') cuerpo = pantallaRevela(e, e.pruebas[i]);
+    else cuerpo = pantallaPrueba(e, e.pruebas[i]);
+    pinta('<div class="pantalla">' + barra(true)
+      + '<main class="juego">'
+      + '<div class="juego-cab"><span class="sobretitulo">Estación ' + e.numero + ' · ' + esc(e.nombre) + '</span>' + progreso
+      + (!esClave && G.vista !== 'revela' ? '<button class="ir-codigo" data-a="irCodigo">' + (soyMando() ? 'Digitar el código ↓' : 'Ver el código ↓') + '</button>' : '') + '</div>'
+      + cuerpo
+      + guiaHTML(e, i)
+      + (soyMando() ? '<footer class="pie-finalizar"><button class="btn fantasma pequeno" data-a="finalizarYa" id="btnFinYa">Validar y finalizar la estación ahora</button><small>Guarda los puntos logrados hasta aquí. Lo que no hayan respondido queda en cero.</small></footer>' : '')
+      + pieMando()
       + '</main></div>');
-
-    if (paso.tipo === 'codigo') { const inp = document.getElementById('codigo'); if (inp && !estadoCodigo(paso).ok) setTimeout(() => inp.focus(), 80); }
-    iniciarTicker();
+    const inp = document.getElementById('codigo');
+    if (inp && soyMando() && !('ontouchstart' in window)) inp.focus();
   }
 
-  function cuerpoPaso(e, paso) {
-    if (paso.tipo === 'accion') {
-      return '<div class="panel hud accion"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
-        + '<div class="mesa-indicador"><span class="mesa-icono" aria-hidden="true"></span>Esta acción se realiza en la mesa física</div>'
-        + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'HECHO') + ' →</button></div></div>';
+  function tarjetaHTML(e, p) {
+    const t = p.tarjeta;
+    return '<article class="tarjeta-instrucciones">'
+      + '<header><span>Tarjeta de instrucciones</span><span>Estación ' + e.numero + '</span></header>'
+      + '<p class="ti-estacion">' + esc(e.nombre) + '</p>'
+      + '<h2>Prueba ' + esc(p.id) + '</h2>'
+      + '<p class="ti-reto"><b>Reto:</b> ' + esc(t.reto) + '</p>'
+      + '<section class="ti-situacion"><h4>' + esc(t.situacionTitulo) + '</h4><dl>'
+      + t.situacion.map(s => '<dt>' + esc(s[0]) + '</dt><dd>' + esc(s[1]) + '</dd>').join('') + '</dl></section>'
+      + '<section class="ti-mision"><h4>Misión del equipo</h4><ol>'
+      + t.mision.map(m => '<li><b>' + esc(m.t) + ':</b> ' + esc(m.d)
+        + (m.sub ? '<ul>' + m.sub.map(s => '<li>' + esc(s) + '</li>').join('') + '</ul>' : '') + '</li>').join('')
+      + '</ol></section>'
+      + (t.atencion ? '<p class="ti-atencion"><b>Atención Cronocirujanos:</b> ' + esc(t.atencion) + '</p>' : '')
+      + '<footer><span>Prueba ' + esc(p.id) + '</span></footer>'
+      + '</article>';
+  }
+
+  function pantallaPrueba(e, p) {
+    return tarjetaHTML(e, p)
+      + (p.paneles || []).map(x => panelHTML(x)).join('')
+      + codigoHTML(p.codigo, false);
+  }
+  function pantallaClave(e) {
+    return '<article class="tarjeta-instrucciones clave"><header><span>Consola de validación</span><span>Estación ' + e.numero + '</span></header>'
+      + '<p class="ti-estacion">' + esc(e.nombre) + '</p><h2>Clave de salida</h2>'
+      + '<p class="ti-reto">' + esc(e.clave.pregunta) + '</p></article>'
+      + codigoHTML(e.clave, true);
+  }
+  function pantallaRevela(e, p) {
+    const r = p.revela;
+    let cont = '';
+    if (r.documento) {
+      const d = r.documento;
+      cont = '<article class="documento"><header><b>' + esc(d.titulo) + '</b><small>' + esc(d.encabezado) + '</small></header><dl>'
+        + d.lineas.map(l => '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>').join('') + '</dl></article>';
+    } else if (r.tarjetas) {
+      cont = '<div class="relevancia">' + r.tarjetas.map(t => '<article class="hud"><h4>' + esc(t[0]) + '</h4><p><b>Relevancia clínica:</b> ' + esc(t[1]) + '</p></article>').join('') + '</div>';
+    } else if (r.mensaje) {
+      cont = '<p class="mensaje-sistema">' + esc(r.mensaje) + '</p>';
     }
-    if (paso.tipo === 'revelacion') {
-      const d = paso.documento;
-      return '<div class="panel hud"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
-        + '<article class="documento"><header><b>' + esc(d.titulo) + '</b><small>' + esc(d.encabezado) + '</small></header><dl>'
-        + d.lineas.map(l => '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>').join('') + '</dl></article>'
-        + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'CONTINUAR') + ' →</button></div></div>';
+    return '<section class="revela"><p class="sobretitulo">Prueba ' + esc(p.id) + '</p><h2>' + esc(r.titulo) + '</h2>' + cont + '</section>'
+      + (soyMando() ? '<div class="acciones"><button class="btn primario" data-a="continuar">CONTINUAR →</button></div>' : '<p class="espera">El Comandante continuará cuando el grupo esté listo.</p>');
+  }
+
+  function codigoHTML(c, esClave) {
+    const st = (G.codigos || {})[c.id] || { i: 0 };
+    const resuelto = st.ok || st.rev;
+    let h = '<section class="panel-codigo hud ' + (esClave ? 'salida' : '') + '">'
+      + '<p class="sobretitulo">' + (esClave ? 'Clave final combinada' : 'Código de validación · registrar en la consola') + '</p>'
+      + '<p class="pregunta">' + esc(c.pregunta) + '</p>';
+    if (resuelto) {
+      h += '<div class="resultado-codigo ' + (st.ok ? 'bien' : 'revelado') + '">'
+        + (c.candado ? '<div class="candado abierto" aria-hidden="true"><i></i></div>' : '')
+        + '<b>' + (st.ok ? 'CÓDIGO CORRECTO' : 'RESPUESTA CORRECTA') + '</b>'
+        + '<span class="codigo-mostrado">' + esc(st.ok ? st.v : revelar(c.id)) + '</span>'
+        + '<small>' + (st.ok ? '+' + c.puntos + ' puntos' : 'Agotaron los 2 intentos · esta prueba no suma puntos') + '</small>'
+        + '<p>Copiloto: registren este código en la bitácora.</p></div>'
+        + (soyMando() ? '<div class="acciones"><button class="btn primario" data-a="continuar">' + (esClave ? 'VALIDAR Y FINALIZAR ESTACIÓN →' : 'CONTINUAR →') + '</button></div>'
+          : '<p class="espera">' + (esClave ? 'El Comandante validará y finalizará la estación.' : 'El Comandante continuará con la siguiente prueba.') + '</p>');
+    } else if (soyMando()) {
+      const quedan = J.intentos - (st.i || 0);
+      h += '<form class="form-codigo" data-form="codigo" data-codigo="' + esc(c.id) + '">'
+        + (c.candado ? '<div class="candado" aria-hidden="true"><i></i></div>' : '')
+        + '<label for="codigo" class="formato">' + esc(c.formato) + '</label>'
+        + '<input id="codigo" class="entrada-codigo" maxlength="20" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="' + esc(c.placeholder || '') + '">'
+        + '<div class="intentos">' + Array.from({ length: J.intentos }, (_, k) => '<i class="' + (k < (st.i || 0) ? 'gastado' : '') + '"></i>').join('')
+        + '<span>' + quedan + (quedan === 1 ? ' intento' : ' intentos') + '</span></div>'
+        + '<p class="mensaje-error" id="msgErr" role="alert">' + esc(st.e || '') + '</p>'
+        + '<div class="acciones centro"><button type="submit" class="btn primario">VALIDAR CÓDIGO</button></div></form>';
+    } else {
+      h += '<p class="formato">' + esc(c.formato) + '</p>'
+        + '<div class="espera-codigo"><span class="pulso"></span>El Comandante de Misión digitará el código en su consola.'
+        + ((st.i || 0) ? '<br><b>Intento fallido: queda ' + (J.intentos - st.i) + '.</b>' + (st.e ? ' ' + esc(st.e) : '') : '') + '</div>';
     }
-    if (paso.tipo === 'solicitud') {
-      const visto = !!S.actual.revelados[paso.id];
-      return '<div class="panel hud"><h2>' + esc(paso.titulo) + '</h2><p class="instruccion">' + esc(paso.instruccion) + '</p>'
-        + (visto ? monitorHTML(paso.revela) + '<div class="acciones"><button class="btn primario" data-a="hecho">' + esc(paso.boton || 'CONTINUAR') + ' →</button></div>'
-          : '<div class="acciones centro"><button class="btn solicitud" data-a="solicitar">' + esc(paso.botonSolicitud) + '</button></div>')
-        + '</div>';
+    return h + '</section>';
+  }
+
+  /* --------------------------------------------------- paneles de pantalla */
+  const MARCAS = {};   /* marcas locales en tableros (no afectan el puntaje) */
+  function panelHTML(x) {
+    if (x.tipo === 'monitor') return monitorHTML();
+    if (x.tipo === 'tablero-tiempos') {
+      return '<section class="panel-pared hud"><p class="sobretitulo">En pantalla · antes en la pared</p><h3>' + esc(x.titulo) + '</h3>'
+        + '<div class="tablero-vuelos"><div class="tv-cab"><span>REVISIÓN</span><span>TIEMPO MÁXIMO</span><span>ESTADO</span></div>'
+        + x.opciones.map((o, k) => { const on = MARCAS['t' + k]; return '<button class="tv-fila ' + (on ? 'on' : '') + '" data-marca="t' + k + '"><span>CAVIDAD ABDOMINAL</span><span class="tv-tiempo">' + esc(o) + '</span><span>' + (on ? '<i class="sello">S</i> MARCADO' : 'PROGRAMADO') + '</span></button>'; }).join('')
+        + '</div><p class="nota">Toquen el tiempo para marcarlo con el adhesivo “S”.</p></section>';
     }
-    if (paso.tipo === 'codigo') {
-      const st = estadoCodigo(paso);
-      const quedan = J.intentosPorCodigo - st.intentos;
-      let cuerpo;
-      if (st.ok || st.liberado) {
-        cuerpo = '<div class="resultado-codigo ' + (st.ok ? 'bien' : 'liberado') + '">'
-          + (paso.candado ? '<div class="candado abierto" aria-hidden="true"><i></i></div>' : '')
-          + '<b>' + (st.ok ? 'CÓDIGO ACEPTADO' : 'CÓDIGO LIBERADO POR EL GUÍA') + '</b>'
-          + '<span class="codigo-mostrado">' + esc(st.ok ? st.valor : descifrar(paso.liberar)) + '</span>'
-          + (st.ok && !st.sinPuntos ? '<small>+' + paso.puntos + ' puntos</small>' : '<small>Esta prueba no suma puntos</small>')
-          + (paso.bitacora ? '<p>' + esc(paso.bitacora) + '</p>' : '')
-          + '</div><div class="acciones"><button class="btn primario" data-a="hecho">' + (paso.salida ? 'CERRAR LA CÁMARA →' : 'CONTINUAR →') + '</button></div>';
-      } else {
-        cuerpo = '<form class="form-codigo" data-form="codigo">'
-          + (paso.candado ? '<div class="candado" aria-hidden="true"><i></i></div>' : '')
-          + '<label for="codigo" class="formato">' + esc(paso.formato) + '</label>'
-          + '<input id="codigo" class="entrada-codigo" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="' + esc(paso.placeholder || '') + '">'
-          + '<div class="intentos">' + Array.from({ length: J.intentosPorCodigo }, (_, k) => '<i class="' + (k < st.intentos ? 'gastado' : '') + '"></i>').join('')
-          + '<span>' + quedan + (quedan === 1 ? ' intento' : ' intentos') + ' con puntos</span></div>'
-          + '<p class="mensaje-error" id="msgErr" role="alert">' + esc(st.ultimoError || '') + '</p>'
-          + '<div class="acciones"><button type="submit" class="btn primario">VALIDAR CÓDIGO</button></div>'
-          + (st.intentos >= J.intentosPorCodigo ? '<div class="liberar"><p>Agotaron los intentos con puntos. Pueden seguir intentando o pedir al Guía que libere el código para no detener la misión.</p><button type="button" class="btn fantasma" data-a="liberar">LIBERAR CÓDIGO (0 PUNTOS)</button></div>' : '')
-          + '</form>';
-      }
-      return '<div class="panel hud codigo ' + (paso.salida ? 'salida' : '') + '"><h2>' + esc(paso.titulo) + '</h2><p class="pregunta">' + esc(paso.pregunta) + '</p>' + cuerpo + '</div>';
+    if (x.tipo === 'excepciones') {
+      return '<section class="panel-pared hud"><p class="sobretitulo">En pantalla · antes en la pared</p><h3>' + esc(x.titulo) + '</h3><div class="excepciones">'
+        + x.items.map((it, k) => { const on = MARCAS['x' + k]; return '<button class="exc ' + (on ? 'on' : '') + '" data-marca="x' + k + '"><span>' + esc(it[0]) + '</span><b>' + it[1] + '</b></button>'; }).join('')
+        + '</div><p class="nota">Toquen las que consideren críticas para marcarlas.</p></section>';
+    }
+    if (x.tipo === 'criterios') {
+      return '<section class="panel-pared hud"><p class="sobretitulo">En pantalla · antes en la pared</p><h3>' + esc(x.titulo) + '</h3><div class="criterios">'
+        + x.items.map((it, k) => { const on = MARCAS['c' + k]; return '<button class="crit ' + (on ? 'on' : '') + '" data-marca="c' + k + '"><b class="letra">' + esc(it[1]) + '</b><span>' + esc(it[0]) + '</span>' + (on ? '<i class="emb">EMBAJADORES</i>' : '') + '</button>'; }).join('')
+        + '</div><p class="nota">Toquen un criterio para fijarle el distintivo de Embajadores.</p></section>';
+    }
+    if (x.tipo === 'ocultos') {
+      return '<section class="panel-pared hud"><p class="sobretitulo">Parámetros ocultos</p><h3>' + esc(x.titulo) + '</h3><div class="ocultos">'
+        + x.items.map((it, k) => { const on = MARCAS['o' + k]; return '<button class="oculto ' + (on ? 'on' : '') + '" data-marca="o' + k + '"><small>' + esc(it[0]) + '</small><b>' + (on ? esc(it[1]) : '▒▒▒▒▒') + '</b></button>'; }).join('')
+        + '</div></section>';
+    }
+    if (x.tipo === 'prevena') {
+      return '<section class="panel-prevena hud"><p class="sobretitulo">Aplicación interactiva</p><h3>Prevena™ · Manejo de incisiones</h3>'
+        + '<p>Cada integrante puede abrirla en su celular.</p><button class="btn primario" data-a="abrirPrevena">ABRIR APLICACIÓN PREVENA™</button></section>';
     }
     return '';
   }
-
-  function monitorHTML(r) {
-    return '<div class="monitor"><div class="monitor-ecg"><svg viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true"><path class="ecg" pathLength="1000" d="M0 45 L60 45 L70 40 L78 45 L95 45 L100 10 L106 70 L112 45 L135 45 L145 36 L160 45 L200 45 L210 40 L218 45 L235 45 L240 10 L246 70 L252 45 L275 45 L285 36 L300 45 L340 45 L350 40 L358 45 L375 45 L380 10 L386 70 L392 45 L415 45 L425 36 L440 45 L480 45 L490 40 L498 45 L515 45 L520 10 L526 70 L532 45 L555 45 L565 36 L580 45 L600 45"/></svg></div>'
-      + '<div class="vitales">' + r.vitales.map(v => '<div class="vital ' + (v.alerta ? 'alerta' : '') + (v.destacar ? ' destacar' : '') + '"><small>' + esc(v.etiqueta) + '</small><b>' + esc(v.valor) + '</b><span>' + esc(v.unidad) + '</span></div>').join('') + '</div>'
-      + '<div class="imagen-dx"><small>' + esc(r.imagen.titulo) + '</small><b>' + esc(r.imagen.resultado) + '</b><p>' + esc(r.imagen.detalle) + '</p></div>'
-      + (r.nota ? '<p class="monitor-nota">' + esc(r.nota) + '</p>' : '')
-      + '</div>';
+  function monitorHTML() {
+    return '<section class="monitor"><p class="sobretitulo">Monitor del paciente</p>'
+      + '<div class="monitor-ecg"><svg viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true"><path class="ecg" pathLength="1000" d="M0 45 L60 45 L70 40 L78 45 L95 45 L100 10 L106 70 L112 45 L135 45 L145 36 L160 45 L200 45 L210 40 L218 45 L235 45 L240 10 L246 70 L252 45 L275 45 L285 36 L300 45 L340 45 L350 40 L358 45 L375 45 L380 10 L386 70 L392 45 L415 45 L425 36 L440 45 L480 45 L490 40 L498 45 L515 45 L520 10 L526 70 L532 45 L555 45 L565 36 L580 45 L600 45"/></svg></div>'
+      + '<div class="vitales">'
+      + '<div class="vital alerta"><small>TA</small><b>80/50</b><span>mmHg</span></div>'
+      + '<div class="vital alerta"><small>FC</small><b>130</b><span>lpm</span></div>'
+      + '<div class="vital destacar"><small>T°</small><b>34.8</b><span>°C</span></div>'
+      + '<div class="vital"><small>GLASGOW</small><b>14</b><span>/15</span></div></div>'
+      + '<div class="imagen-dx"><small>Ecografía FAST</small><b>POSITIVA (+)</b><p>Líquido libre en espacio hepatorrenal (Morison) y cavidad. Compatible con hemoperitoneo masivo.</p></div>'
+      + '<p class="monitor-nota">Sin respuesta a 2 L de cristaloides: shock refractario.</p></section>';
   }
 
-  /* ---- Panel del Guía: mensaje + pistas por tiempo ---- */
-  function nivelPista(paso) {
-    if (!paso.pistas || !paso.pistas.length) return 0;
-    const seg = (ahora() - S.actual.pasoDesde) / 1000;
-    let n = 0; J.pistasSegundos.forEach((s, k) => { if (seg >= s && k < paso.pistas.length) n = k + 1; });
-    return n;
-  }
-  function guiaHTML(paso) {
-    const a = S.actual;
-    const nivel = nivelPista(paso);
-    const vistas = a.pistasVistas[paso.id] || 0;
+  /* --------------------------------------------------- guía y pistas */
+  function guiaHTML(e, i) {
+    const p = e.pruebas[i];
     let pistas = '';
-    if (paso.pistas && paso.pistas.length) {
-      const items = [];
-      for (let k = 0; k < paso.pistas.length; k++) {
-        const directa = k === paso.pistas.length - 1;
-        if (k < vistas) items.push('<li class="pista abierta ' + (directa ? 'directa' : '') + '"><small>Pista ' + (k + 1) + (directa ? ' · directa' : '') + '</small><p>' + esc(paso.pistas[k]) + '</p></li>');
-        else if (k < nivel && k === vistas) items.push('<li class="pista disponible"><button class="btn pista-btn ' + (directa ? 'directa' : '') + '" data-a="pista">' + (directa ? 'Ver pista directa (−' + J.costoPistaDirecta + ' punto)' : 'Ver pista ' + (k + 1)) + '</button></li>');
-        else if (k === vistas) {
-          const falta = Math.max(0, J.pistasSegundos[k] - (ahora() - a.pasoDesde) / 1000);
-          items.push('<li class="pista espera"><small>Pista ' + (k + 1) + ' disponible en <span id="faltaPista">' + mmss(falta) + '</span></small></li>');
-        }
-      }
-      pistas = '<ul class="pistas">' + items.join('') + '</ul>';
+    if (p && p.pistas && p.pistas.length && G.vista !== 'revela') {
+      const seg = G.pruebaDesde ? (ahora() - G.pruebaDesde) / 1000 : 0;
+      const items = p.pistas.map((txt, k) => {
+        if (seg >= J.pistasSegundos[k]) return '<li class="pista abierta"><small>Pista ' + (k + 1) + '</small><p>' + esc(txt) + '</p></li>';
+        if (k === 0 || seg >= J.pistasSegundos[k - 1]) return '<li class="pista espera"><small>Pista ' + (k + 1) + ' en <span data-falta="' + J.pistasSegundos[k] + '">' + mmss(J.pistasSegundos[k] - seg) + '</span></small></li>';
+        return '';
+      }).join('');
+      pistas = '<ul class="pistas">' + items + '</ul>';
     }
-    const agotado = restante() <= 0;
-    return guardian('Guía Especialista')
-      + '<p class="guia-texto">' + esc(paso.guia || (paso.tipo === 'codigo' ? 'Comandante: digiten el código cuando el equipo tenga consenso. Copiloto: revisen la bitácora antes de validar. Cada error cuesta un intento.' : '')) + '</p>'
-      + (agotado ? '<p class="guia-alerta">Tiempo agotado. La bonificación por tiempo se pierde, pero terminen la cámara: el paciente los necesita.</p>' : '')
-      + pistas
-      + '<button class="btn fantasma pequeno" data-a="repetir">Repetir indicación</button>';
+    const t = transcurrido();
+    const alerta = t > SEG_OFICIAL ? '<p class="guia-alerta">Tiempo oficial agotado. Tienen 30 segundos para validar: si el reloj cierra la estación, queda en cero.</p>'
+      : (t > SEG_OFICIAL - 120 ? '<p class="guia-alerta suave">Quedan menos de 2 minutos.</p>' : '');
+    if (!pistas && !alerta) return '';
+    return '<aside class="guia hud" id="guia">' + guardian('Guía de la misión') + alerta + pistas + '</aside>';
   }
 
-  /* ---------------------------------------------------- reloj y ticker */
-  let tickId = null, ultimoNivel = -1, ultimoSeg = -1;
-  function restante() {
-    const a = S.actual; if (!a || !a.inicio) return SEG_ESTACION;
-    return SEG_ESTACION - (ahora() - a.inicio) / 1000;
-  }
-  function iniciarTicker() {
-    const e = estacion(S.actual.est), paso = e.pasos[S.actual.paso];
-    ultimoNivel = nivelPista(paso);
-    tickId = setInterval(function () {
-      const r = restante(), el = document.getElementById('reloj');
-      if (el) {
-        el.textContent = mmss(r);
-        el.classList.toggle('urgente', r <= 120 && r > 0);
-        el.classList.toggle('agotado', r <= 0);
-      }
-      const s = Math.ceil(r);
-      if (s !== ultimoSeg) {
-        if (s <= 60 && s > 0) SFX.tic();
-        if (s === 0) { SFX.error(); decir('Tiempo agotado. Terminen la cámara.'); }
-        ultimoSeg = s;
-      }
-      const n = nivelPista(paso);
-      const g = document.getElementById('guia');
-      if (g && n !== ultimoNivel) {
-        ultimoNivel = n; SFX.paso();
-        if ((S.actual.pistasVistas[paso.id] || 0) < n) decir('Hay una pista disponible.');
-        g.innerHTML = guiaHTML(paso);
-      } else {
-        const f = document.getElementById('faltaPista');
-        if (f) { const k = S.actual.pistasVistas[paso.id] || 0; f.textContent = mmss(J.pistasSegundos[k] - (ahora() - S.actual.pasoDesde) / 1000); }
-      }
-      if (s === 0 && g) g.innerHTML = guiaHTML(paso);
-    }, 1000);
-  }
-  function detenerTicker() { if (tickId) clearInterval(tickId); tickId = null; }
-
-  /* ------------------------------------------------------------- puntaje */
-  function estadoCodigo(paso) {
-    const a = S.actual;
-    if (!a.codigos[paso.codigo]) a.codigos[paso.codigo] = { intentos: 0, ok: false, liberado: false, valor: '', ultimoError: '' };
-    return a.codigos[paso.codigo];
-  }
-  function bonoTiempo(seg) {
-    for (const b of J.bonosTiempo) if (seg <= b.hasta) return b;
-    return { puntos: 0, etiqueta: 'Fuera de tiempo' };
-  }
-  function calcularResultado() {
-    const a = S.actual, e = estacion(a.est);
-    let codigos = 0, maxCodigos = 0, aciertos = 0;
-    const detalle = [];
-    e.pasos.filter(p => p.tipo === 'codigo').forEach(p => {
-      const st = a.codigos[p.codigo] || {};
-      const pts = st.ok && !st.sinPuntos ? p.puntos : 0;
-      maxCodigos += p.puntos; codigos += pts; if (st.ok) aciertos++;
-      detalle.push({ codigo: p.codigo, titulo: p.titulo, puntos: pts, max: p.puntos, ok: !!st.ok, liberado: !!st.liberado, intentos: st.intentos || 0 });
-    });
-    const usados = Math.round((a.fin - a.inicio) / 1000);
-    const bono = bonoTiempo(usados);
-    const directas = Object.keys(a.pistasVistas).reduce((n, id) => {
-      const p = e.pasos.find(x => x.id === id); return n + (p && p.pistas && a.pistasVistas[id] >= p.pistas.length ? 1 : 0);
-    }, 0);
-    const penal = directas * J.costoPistaDirecta;
-    const total = Math.max(0, codigos + bono.puntos - penal);
-    return { codigos, maxCodigos, aciertos, detalle, usados, bono, directas, penal, total };
-  }
-  function totalPuntos() { return Object.values(S.resultados).reduce((n, r) => n + r.total, 0); }
-
-  /* ---- Cierre de la cámara: resultado y debriefing ---- */
-  function pCierre() {
-    const e = estacion(S.actual.est), r = S.resultados[e.id], c = e.cierre;
-    pinta('<div class="pantalla">' + barra({ puntos: true })
-      + '<main class="cierre">'
-      + '<section class="cierre-cab"><p class="sobretitulo">Cámara ' + e.numero + ' superada</p><h2>' + esc(c.mensaje) + '</h2><p>' + esc(c.detalle) + '</p></section>'
-      + '<div class="cierre-grid">'
-      + '<section class="marcador hud"><div class="marcador-total"><b>' + r.total + '</b><span>/ 20</span></div>'
-      + '<table><tbody>'
-      + r.detalle.map(d => '<tr><td>Código ' + esc(d.codigo) + (d.liberado ? ' <em>liberado</em>' : '') + '</td><td>' + d.puntos + ' / ' + d.max + '</td></tr>').join('')
-      + '<tr><td>Tiempo ' + mmss(r.usados) + ' · ' + esc(r.bono.etiqueta) + '</td><td>+' + r.bono.puntos + '</td></tr>'
-      + (r.penal ? '<tr><td>Pistas directas usadas (' + r.directas + ')</td><td>−' + r.penal + '</td></tr>' : '')
+  /* ===================================================== RETROALIMENTACIÓN */
+  function pRetro() {
+    const e = estacion(), r = (G.res || {})[e.id] || { resp: 0, tiempo: 0, total: 0, por: 'reloj' };
+    const porReloj = r.por === 'reloj';
+    const ultima = estacionIdx() >= C.estaciones.length - 1;
+    pinta('<div class="pantalla">' + barra(false)
+      + '<main class="retro">'
+      + lineaDeVida()
+      + '<section class="retro-cab ' + (porReloj ? 'agotado' : '') + '"><p class="sobretitulo">Estación ' + e.numero + ' · ' + esc(e.nombre) + '</p>'
+      + '<h2>' + (porReloj ? 'TIEMPO AGOTADO' : esc(e.desbloqueo.split('!')[0] + '!')) + '</h2>'
+      + '<p>' + esc(porReloj ? 'El reloj cerró la estación antes de la validación. Esta estación queda en cero, pero el aprendizaje continúa.' : e.desbloqueo.split('!').slice(1).join('!').trim()) + '</p></section>'
+      + '<div class="retro-grid">'
+      + '<section class="marcador hud"><div class="marcador-total"><b>' + r.total + '</b><span>/ 20</span></div><table><tbody>'
+      + '<tr><td>Puntos por respuestas</td><td>' + r.resp + ' / 14</td></tr>'
+      + '<tr><td>Puntos por agilidad' + (r.seg != null ? ' · ' + mmss(r.seg) : '') + '</td><td>+' + r.tiempo + '</td></tr>'
       + '</tbody></table></section>'
-      + '<section class="debrief hud">' + guardian('Guía Especialista')
-      + '<blockquote>' + esc(c.especialista) + '</blockquote>'
-      + '<h4>Lo que se llevan de esta cámara</h4><ul>' + c.aprendizajes.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
-      + '<p class="linea-vida">' + esc(c.lineaVida) + '</p>'
-      + '</section></div>'
-      + '<p class="siguiente">' + esc(c.siguiente) + '</p>'
-      + '<div class="acciones centro"><button class="btn fantasma" data-a="repetirCierre">Escuchar de nuevo</button><button class="btn primario grande" data-a="mapa">VOLVER A LA LÍNEA DE TIEMPO →</button></div>'
+      + '<section class="debrief hud">' + guardian('Retroalimentación') + '<blockquote>' + esc(e.cierre) + '</blockquote>'
+      + '<button class="btn fantasma pequeno" data-a="repetirCierre">Escuchar de nuevo</button></section>'
+      + '</div>'
+      + (soyMando()
+        ? '<div class="acciones centro"><button class="btn primario grande" data-a="siguiente">' + (ultima ? 'VER EL RESULTADO FINAL →' : 'IR A LA ESTACIÓN ' + (e.numero + 1) + ' →') + '</button></div>'
+        : '<p class="espera">Escuchen la retroalimentación. El Comandante abrirá la siguiente etapa.</p>')
+      + pieMando()
       + '</main></div>');
-    decir(c.mensaje + ' ' + c.especialista);
   }
 
-  /* ------------------------------------------------------------- acciones */
-  function irPaso(n) {
-    const a = S.actual; a.paso = n; a.pasoDesde = ahora(); guardar();
-    S.pantalla = 'paso'; render();
-    const paso = estacion(a.est).pasos[n];
-    SFX.paso();
-    decir(paso.tipo === 'codigo' ? paso.titulo + '. ' + paso.pregunta : paso.titulo + '. ' + paso.instruccion + ' ' + (paso.guia || ''));
-  }
-  function avanzar() {
-    const a = S.actual, e = estacion(a.est);
-    if (a.paso < e.pasos.length - 1) return irPaso(a.paso + 1);
-    a.fin = ahora();
-    S.resultados[e.id] = calcularResultado();
-    if (S.hechas.indexOf(e.id) < 0) S.hechas.push(e.id);
-    S.pantalla = 'cierre'; guardar(); SFX.ok(); render();
+  /* ===================================================== 7 · CIERRE */
+  let RANKING = null;
+  function pFin() {
+    const res = G.res || {};
+    const total = C.estaciones.reduce((n, e) => n + ((res[e.id] || {}).total || 0), 0);
+    const g = grupoDe(YO.grupo);
+    let rk = '';
+    if (RANKING) {
+      rk = '<section class="ranking hud"><h3>Posiciones</h3><ol>' + RANKING.map(x =>
+        '<li class="' + (x.id === YO.grupo ? 'yo' : '') + '" style="--g:' + grupoDe(x.id).color + '"><span>' + grupoDe(x.id).simbolo + ' ' + esc(grupoDe(x.id).nombre) + '</span><b>' + x.total + '</b>' + (x.terminado ? '' : '<small>en juego</small>') + '</li>').join('') + '</ol></section>';
+    }
+    pinta('<div class="pantalla">' + barra(false)
+      + '<main class="fin">'
+      + lineaDeVida()
+      + '<section class="fin-cab"><p class="sobretitulo">' + esc(g.nombre) + '</p><h1>' + esc(C.final.titulo) + '</h1><p>' + esc(C.final.texto) + '</p></section>'
+      + '<section class="marcador-final hud"><small>SCORE TOTAL DEL EQUIPO</small><b>' + total + '</b><span>/ 100</span>'
+      + '<table><tbody>' + C.estaciones.map(e => { const r = res[e.id] || {}; return '<tr><td>E' + e.numero + ' · ' + esc(e.nombre) + '</td><td>' + (r.total || 0) + '</td></tr>'; }).join('') + '</tbody></table></section>'
+      + rk
+      + '</main></div>');
   }
 
-  async function validar() {
-    const a = S.actual, e = estacion(a.est), paso = e.pasos[a.paso];
-    const inp = document.getElementById('codigo'), msg = document.getElementById('msgErr');
+  /* ===================================================== lógica de juego */
+  function resultado(e, porReloj) {
+    if (porReloj) return { resp: 0, tiempo: 0, total: 0, seg: Math.round(transcurrido()), por: 'reloj' };
+    const cods = e.pruebas.map(p => p.codigo).concat([e.clave]);
+    const resp = cods.reduce((n, c) => n + (((G.codigos || {})[c.id] || {}).ok ? c.puntos : 0), 0);
+    const seg = Math.round(transcurrido());
+    const banda = (C.bandas[e.bandas] || C.bandas.estandar).find(b => seg <= b.hasta);
+    const tiempo = banda ? banda.puntos : 0;
+    return { resp: resp, tiempo: tiempo, total: resp + tiempo, seg: seg, por: 'validada' };
+  }
+  function finalizar(porReloj) {
+    const e = estacion();
+    if (fase() !== 'juego') return;
+    const res = Object.assign({}, G.res || {}); res[e.id] = resultado(e, porReloj);
+    if (porReloj) SFX.error(); else SFX.ok();
+    escribir({ fase: 'retro', res: res, fin: ahora() });
+  }
+
+  async function validarCodigo(id) {
+    const inp = document.getElementById('codigo');
     const valor = (inp && inp.value || '').trim();
+    const msg = document.getElementById('msgErr');
     if (!valor) { if (msg) msg.textContent = 'Escriban el código antes de validar.'; return; }
-    const st = estadoCodigo(paso);
-    const h = await huella(paso.codigo, valor);
-    if (paso.huellas.indexOf(h) >= 0) {
-      st.ok = true; st.valor = valor.toUpperCase(); st.ultimoError = '';
-      if (st.intentos >= J.intentosPorCodigo) st.sinPuntos = true;
-      guardar(); paso.candado ? SFX.candado() : SFX.ok();
-      render(); decir('Código aceptado. ' + (paso.bitacora || ''));
-      return;
+    const cods = Object.assign({}, G.codigos || {});
+    const st = Object.assign({ i: 0 }, cods[id] || {});
+    if (st.ok || st.rev) return;
+    const h = await huella(id, valor);
+    if (H[id] && h === H[id].h) {
+      st.ok = true; st.v = valor.toUpperCase(); st.e = '';
+      cods[id] = st;
+      const c = codigoActual();
+      (c && c.candado) ? SFX.candado() : SFX.ok();
+      decir('Código correcto. Copiloto: regístrenlo en la bitácora.');
+      return escribir({ codigos: cods });
     }
-    st.intentos++;
-    const n = norm(valor);
-    const especifico = (paso.errores || []).find(x => new RegExp(x.si).test(n));
-    st.ultimoError = especifico ? especifico.msg : paso.errorGeneral;
-    guardar(); SFX.error(); render(); decir(st.ultimoError);
-    const nuevo = document.getElementById('codigo'); if (nuevo) { nuevo.classList.add('sacudir'); }
+    st.i = (st.i || 0) + 1;
+    const c = codigoActual(), n = norm(valor);
+    const esp = c && (c.errores || []).find(x => new RegExp(x.si).test(n));
+    st.e = esp ? esp.msg : (c ? c.errorGeneral : 'Código incorrecto.');
+    if (st.i >= J.intentos) { st.rev = true; st.e = ''; decir('Agotaron los dos intentos. La respuesta correcta aparece en pantalla.'); }
+    else decir('Código incorrecto. ' + st.e + ' Les queda un intento.');
+    cods[id] = st;
+    SFX.error();
+    escribir({ codigos: cods });
+  }
+  function codigoActual() {
+    const e = estacion(), i = G.prueba || 0;
+    return codigoDePaso(e, i);
+  }
+  function continuar() {
+    const e = estacion(), i = G.prueba || 0;
+    if (i >= e.pruebas.length) return finalizar(false);
+    const p = e.pruebas[i];
+    if (p.revela && G.vista !== 'revela') return escribir({ vista: 'revela' });
+    escribir({ prueba: i + 1, vista: 'prueba', pruebaDesde: ahora() });
   }
 
+  /* ----------------------------------------------- voz según la pantalla */
+  let ULTIMA_DICHA = '';
+  function narrar() {
+    const k = claveVista();
+    if (k === ULTIMA_DICHA) return;
+    ULTIMA_DICHA = k;
+    const f = fase(), e = estacion();
+    if (f === 'portico') return decir(J.intro.join(' '));
+    if (f === 'antesala') return decir('Estación ' + e.numero + ': ' + e.nombre + '. ' + e.subtitulo + '. ' + e.concepto);
+    if (f === 'juego') {
+      const i = G.prueba || 0;
+      if (i >= e.pruebas.length) return decir('Clave de salida. ' + e.clave.pregunta);
+      const p = e.pruebas[i];
+      if (G.vista === 'revela') return decir(p.revela.titulo + '. ' + (p.revela.mensaje || ''));
+      return decir('Prueba ' + p.id + '. ' + p.tarjeta.reto + '. Misión del equipo. ' + p.tarjeta.mision.map(m => m.t + '. ' + m.d).join(' ') + (p.tarjeta.atencion ? ' Atención, Cronocirujanos. ' + p.tarjeta.atencion : ''));
+    }
+    if (f === 'retro') {
+      const r = (G.res || {})[e.id] || {};
+      return decir((r.por === 'reloj' ? 'Tiempo agotado. ' : e.desbloqueo + ' ') + e.cierre);
+    }
+    if (f === 'fin') return decir(C.final.titulo + ' ' + C.final.texto);
+  }
+
+  /* --------------------------------------------------------- reloj (tick) */
+  let ultimoSeg = -1;
+  setInterval(function () {
+    if (!YO || fase() !== 'juego' || !G.inicio) return;
+    const t = transcurrido(), el = document.getElementById('reloj');
+    if (el) {
+      const b = el.querySelector('b'); if (b) b.textContent = relojTexto();
+      el.classList.toggle('urgente', t > SEG_OFICIAL - 120 && t <= SEG_OFICIAL);
+      el.classList.toggle('agotado', t > SEG_OFICIAL);
+    }
+    const s = Math.floor(t);
+    if (s !== ultimoSeg) {
+      if (t > SEG_OFICIAL - 60 && t < SEG_CIERRE) SFX.tic();
+      if (s === SEG_OFICIAL) { decir('Tiempo oficial agotado. Tienen treinta segundos para validar.'); render(); }
+      if (s === SEG_OFICIAL - 120) render();
+      ultimoSeg = s;
+    }
+    document.querySelectorAll('[data-falta]').forEach(x => {
+      const seg = G.pruebaDesde ? (ahora() - G.pruebaDesde) / 1000 : 0;
+      const falta = Number(x.getAttribute('data-falta')) - seg;
+      if (falta <= 0) { render(); decir('Hay una pista disponible.'); } else x.textContent = mmss(falta);
+    });
+    if (t >= SEG_CIERRE && soyMando()) finalizar(true);
+  }, 250);
+
+  /* ----------------------------------------------------- sincronización */
+  async function cargarTodos() { try { TODOS = await D.participantes(); } catch (e) {} }
+  async function sincronizar(forzar) {
+    if (!YO) return;
+    try {
+      const [est, todos] = await Promise.all([D.grupo(YO.grupo), D.participantes()]);
+      TODOS = todos || [];
+      MIEMBROS = TODOS.filter(p => p.grupo === YO.grupo);
+      if (!MIEMBROS.some(m => m.id === YO.id) && TODOS.length === 0) {
+        /* la sesión fue reiniciada por el facilitador */
+        YO = null; guardarYo();
+        G = {}; return render();
+      }
+      if (!ESCRIBIENDO && (est.v || 0) >= (G.v || 0) && (forzar || JSON.stringify(est) !== JSON.stringify(G))) {
+        const antes = claveVista();
+        G = est || {};
+        if (antes !== claveVista() || forzar) { render(); narrar(); }
+        else if (!document.activeElement || document.activeElement.id !== 'codigo') render();
+      }
+      if (fase() === 'fin') await cargarRanking();
+    } catch (e) { /* sin conexión: se reintenta en el siguiente ciclo */ }
+  }
+  async function cargarRanking() {
+    try {
+      const todos = await D.grupos();
+      const conGente = new Set(TODOS.map(p => p.grupo));
+      RANKING = Object.keys(todos).filter(id => conGente.has(id)).map(id => {
+        const res = (todos[id] || {}).res || {};
+        return { id: id, total: Object.values(res).reduce((n, r) => n + (r.total || 0), 0), terminado: (todos[id] || {}).fase === 'fin' };
+      }).sort((a, b) => b.total - a.total);
+      if (fase() === 'fin' && (!document.activeElement || document.activeElement.tagName !== 'INPUT')) pFin();
+    } catch (e) {}
+  }
+  setInterval(() => { if (YO) sincronizar(false); else if (!document.activeElement || document.activeElement.tagName !== 'INPUT') cargarTodos().then(() => { if (!YO) { leerCamposRegistro(); pRegistro(); } }); }, 2000);
+  setInterval(async () => { try { OFFSET = (await D.ahora()) - Date.now(); } catch (e) {} }, 60000);
+
+  /* ------------------------------------------------------------ eventos */
   app.addEventListener('submit', function (ev) {
-    if (ev.target.matches('[data-form="codigo"]')) { ev.preventDefault(); validar(); }
+    const f = ev.target.closest('[data-form="codigo"]');
+    if (f) { ev.preventDefault(); validarCodigo(f.getAttribute('data-codigo')); }
   });
-
-  let confirmarReinicio = 0;
+  app.addEventListener('input', function (ev) {
+    if (ev.target.id === 'nombre' || ev.target.id === 'profesion') {
+      const pos = ev.target.selectionStart; ev.target.value = ev.target.value.toUpperCase(); try { ev.target.setSelectionRange(pos, pos); } catch (e) {}
+    }
+  });
   app.addEventListener('click', function (ev) {
-    const g = ev.target.closest('[data-grupo]');
-    if (g) { S.grupo = g.getAttribute('data-grupo'); const eq = document.getElementById('equipo'); if (eq) S.equipo = eq.value; guardar(); return pInicio(); }
+    const gr = ev.target.closest('[data-grupo]');
+    if (gr && !YO) { leerCamposRegistro(); REG.grupo = gr.getAttribute('data-grupo'); REG.rol = ''; return pRegistro(); }
+    const ro = ev.target.closest('[data-rol]');
+    if (ro && !YO) { leerCamposRegistro(); REG.rol = ro.getAttribute('data-rol'); return pRegistro(); }
+    const mk = ev.target.closest('[data-marca]');
+    if (mk) { const k = mk.getAttribute('data-marca'); MARCAS[k] = !MARCAS[k]; SFX.paso(); return render(); }
     const b = ev.target.closest('[data-a]'); if (!b) return;
-    const acc = b.getAttribute('data-a');
-    audio();
-    switch (acc) {
-      case 'registrar': {
-        const nombre = (document.getElementById('equipo').value || '').trim();
-        const err = document.getElementById('err');
-        if (!nombre) { err.textContent = 'Escriban el nombre del equipo.'; return; }
-        if (!S.grupo) { err.textContent = 'Elijan su grupo.'; return; }
-        S.equipo = nombre; S.pantalla = 'intro'; S.intro = 0; guardar(); SFX.ok(); return render();
+    audio(); desbloquearVoz();
+    const a = b.getAttribute('data-a');
+    switch (a) {
+      case 'registrar': return registrar();
+      case 'voz': YO.voz = !YO.voz; guardarYo(); if (!YO.voz) callar(); else { ULTIMA_DICHA = ''; narrar(); } return render();
+      case 'repetirIntro': return decir(J.intro.join(' '));
+      case 'repetirCierre': { const e = estacion(); return decir(e.cierre); }
+      case 'antesala': if (soyMando()) escribir({ fase: 'antesala', est: G.est || 0 }); return;
+      case 'iniciar': if (soyMando()) { decir(J.arranque); escribir({ fase: 'juego', inicio: ahora(), prueba: 0, vista: 'prueba', pruebaDesde: ahora(), codigos: G.codigos || {} }); } return;
+      case 'continuar': if (soyMando()) continuar(); return;
+      case 'finalizarYa':
+        if (!soyMando()) return;
+        if (b.dataset.ok === '1') return finalizar(false);
+        b.dataset.ok = '1'; b.textContent = 'Toquen de nuevo para confirmar'; setTimeout(() => { b.dataset.ok = ''; b.textContent = 'Validar y finalizar la estación ahora'; }, 4000); return;
+      case 'siguiente': {
+        if (!soyMando()) return;
+        const sig = estacionIdx() + 1;
+        if (sig >= C.estaciones.length) return escribir({ fase: 'fin' });
+        return escribir({ fase: 'antesala', est: sig, prueba: 0, vista: 'prueba', inicio: null });
       }
-      case 'introSig':
-        if (S.intro < J.intro.length - 1) { S.intro++; guardar(); return render(); }
-        S.pantalla = 'mapa'; guardar(); callar(); return render();
-      case 'introSaltar': S.pantalla = 'mapa'; guardar(); callar(); return render();
-      case 'entrar': {
-        const id = b.getAttribute('data-est');
-        S.actual = { est: id, paso: 0, inicio: null, fin: null, pasoDesde: null, codigos: {}, pistasVistas: {}, revelados: {} };
-        S.pantalla = 'briefing'; guardar(); return render();
-      }
-      case 'iniciar': S.actual.inicio = ahora(); callar(); return irPaso(0);
-      case 'hecho': return avanzar();
-      case 'solicitar': {
-        const paso = estacion(S.actual.est).pasos[S.actual.paso];
-        S.actual.revelados[paso.id] = true; guardar(); render(); SFX.monitor(6);
-        decir('Signos vitales: tensión arterial ochenta sobre cincuenta, frecuencia cardíaca ciento treinta, temperatura treinta y cuatro punto ocho grados. FAST positiva: líquido libre en Morison y en toda la cavidad.');
-        return;
-      }
-      case 'pista': {
-        const paso = estacion(S.actual.est).pasos[S.actual.paso];
-        S.actual.pistasVistas[paso.id] = (S.actual.pistasVistas[paso.id] || 0) + 1; guardar();
-        const k = S.actual.pistasVistas[paso.id] - 1;
-        document.getElementById('guia').innerHTML = guiaHTML(paso);
-        return decir(paso.pistas[k]);
-      }
-      case 'liberar': {
-        const paso = estacion(S.actual.est).pasos[S.actual.paso];
-        const st = estadoCodigo(paso); st.liberado = true; st.ultimoError = ''; guardar(); SFX.candado(); render();
-        return decir('El Guía libera el código: ' + descifrar(paso.liberar).split('').join(' ') + '. Esta prueba no suma puntos.');
-      }
-      case 'repetir': {
-        const paso = estacion(S.actual.est).pasos[S.actual.paso];
-        return decir(paso.tipo === 'codigo' ? paso.pregunta : paso.instruccion + ' ' + (paso.guia || ''));
-      }
-      case 'repetirCierre': { const c = estacion(S.actual.est).cierre; return decir(c.especialista + ' ' + c.siguiente); }
-      case 'mapa': S.pantalla = 'mapa'; guardar(); callar(); return render();
-      case 'voz': S.voz = !S.voz; guardar(); if (!S.voz) callar(); b.textContent = S.voz ? 'SONIDO ON' : 'SONIDO OFF'; return;
-      case 'reiniciar':
-        if (confirmarReinicio && ahora() - confirmarReinicio < 4000) { S = nuevo(); guardar(); confirmarReinicio = 0; callar(); return render(); }
-        confirmarReinicio = ahora(); b.textContent = 'Toca de nuevo para borrar la partida'; return;
+      case 'tomarMando':
+        if (confirmarMando && Date.now() - confirmarMando < 4000) { confirmarMando = 0; YO.voz = true; guardarYo(); aviso('Ahora este celular es la consola del grupo.'); return escribir({ control: YO.id }); }
+        confirmarMando = Date.now(); b.textContent = 'Toquen de nuevo para confirmar'; return;
+      case 'irCodigo': { const pc = document.querySelector('.panel-codigo'); if (pc) pc.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+      case 'abrirPrevena': return window.PREVENA && window.PREVENA.abrir();
     }
   });
 
-  /* Respaldo SHA-256 para navegadores sin crypto.subtle (p. ej. archivo local). */
-  function sha256Respaldo(bytes) {
-    const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-    let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
-    const l = bytes.length, conRelleno = new Uint8Array(((l + 9 + 63) >> 6) << 6);
-    conRelleno.set(bytes); conRelleno[l] = 0x80;
-    const bits = l * 8, dv = new DataView(conRelleno.buffer);
-    dv.setUint32(conRelleno.length - 4, bits >>> 0); dv.setUint32(conRelleno.length - 8, Math.floor(bits / 4294967296));
-    const W = new Uint32Array(64), r = (x, n) => (x >>> n) | (x << (32 - n));
-    for (let i = 0; i < conRelleno.length; i += 64) {
-      for (let t = 0; t < 16; t++) W[t] = dv.getUint32(i + t * 4);
-      for (let t = 16; t < 64; t++) { const s0 = r(W[t-15],7) ^ r(W[t-15],18) ^ (W[t-15] >>> 3), s1 = r(W[t-2],17) ^ r(W[t-2],19) ^ (W[t-2] >>> 10); W[t] = (W[t-16] + s0 + W[t-7] + s1) >>> 0; }
-      let [a, b, c, d, e, f, g, h] = H;
-      for (let t = 0; t < 64; t++) {
-        const S1 = r(e,6) ^ r(e,11) ^ r(e,25), ch = (e & f) ^ (~e & g), t1 = (h + S1 + ch + K[t] + W[t]) >>> 0;
-        const S0 = r(a,2) ^ r(a,13) ^ r(a,22), mj = (a & b) ^ (a & c) ^ (b & c), t2 = (S0 + mj) >>> 0;
-        h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
-      }
-      H = [H[0]+a, H[1]+b, H[2]+c, H[3]+d, H[4]+e, H[5]+f, H[6]+g, H[7]+h].map(x => x >>> 0);
+  /* --------------------------------------------------------------- inicio */
+  (async function () {
+    try { OFFSET = (await D.ahora()) - Date.now(); } catch (e) {}
+    if (YO) {
+      await sincronizar(true);
+      if (YO && !MIEMBROS.some(m => m.id === YO.id)) { YO = null; guardarYo(); }
+    } else {
+      await cargarTodos();
     }
-    return H.map(x => x.toString(16).padStart(8, '0')).join('');
-  }
-
-  render();
+    render();
+  })();
 })();

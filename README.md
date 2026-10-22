@@ -1,68 +1,60 @@
 # Máquina del Tiempo · Código: Cirugía del Futuro
 
-Escape room médica híbrida sobre **manejo de abdomen abierto**.
-Las cajas, candados, fichas y cubos son físicos. Esta plataforma asume el rol del **Guía Especialista**: conduce cada paso en pantalla, libera información, valida códigos, da pistas por tiempo y cierra cada cámara con debriefing.
+Escape room médica **híbrida** sobre manejo de abdomen abierto. El material físico (fichas, cubos, cajas con candado, kit AbThera™) viaja en una maleta a cargo del Guía Especialista. Esta plataforma es el facilitador digital: registra a los participantes, conduce las 5 estaciones en orden, muestra las tarjetas de instrucciones, controla el tiempo, valida los códigos y lleva el puntaje en vivo.
 
 **Metodología, diseño del juego y piezas físicas:** Nathalia Velasco · Simoné. Todos los derechos reservados.
 
-## Identidad visual
+## Pantallas
 
-Marca **Solventum**, con el mismo lenguaje de las piezas físicas del evento de Cartagena (marcos tipo HUD, trama de circuito, brillo verde):
+| Pantalla | Dirección | Quién |
+|---|---|---|
+| Consola de misión | `/` (index.html) | El celular de cada participante (iPhone o Android) |
+| Consola de resultados | `/consola.html` | Pantalla grande o proyector: ranking en vivo, QR de ingreso, descarga CSV y reinicio con PIN |
 
-| Uso | Color |
-|---|---|
-| Verde brillante (Malachite) — acentos, botones, títulos | `#05DD4D` |
-| Fondo de pantalla | Negro `#000000` con radar HUD verde |
-| Verde oscuro (Deep Teal) — paneles | `#01332B` |
-| Blanco clínico — texto | `#F4F8F6` |
-| Gris frío — texto secundario | `#A7B8B2` |
-| Rojo — solo alarmas clínicas (signos vitales, errores) | `#FF5A52` |
+## Cómo se juega
 
-Tipografía: Orbitron (títulos futuristas), Montserrat (textos; instrucciones en itálica, como las tarjetas impresas), IBM Plex Mono para monitor y códigos, Special Elite para documentos en papel (historia clínica, reporte quirúrgico).
+1. **Registro** en el celular: nombre completo, profesión (en mayúsculas), grupo, rol y autorización de datos (Ley 1581). 4 grupos × 7: 1 Líder Piloto, 1 Copiloto, 1 Comandante de Misión y 4 Tripulantes de Élite.
+2. **Pórtico**: bienvenida del Guardián, credencial, tripulación y reglas.
+3. **Estaciones 1 → 5** en orden obligatorio. El Comandante inicia el reloj, digita los códigos y avanza; el resto del grupo ve lo mismo en su celular. Si el celular del Comandante falla, otro integrante puede "tomar el mando".
+4. **Retroalimentación** al cerrar cada estación (voz + texto).
+5. **Cierre**: score total sobre 100 y posiciones.
 
-## Probar
+## Reglas implementadas
 
-Enlace de prueba (GitHub Pages): https://nathaliavelasco.github.io/maquina-del-tiempo-/
+- 12:00 de juego + 30 s de gracia. A las **12:30** la estación se cierra sola y queda en **cero** (respuestas y tiempo).
+- **2 intentos** por código. Si fallan los dos, la pantalla muestra la respuesta correcta (0 puntos) para que puedan seguir aprendiendo y abrir el candado físico.
+- Puntos por respuesta según el documento del cliente (4 + 4 + 4 + 2; en E3: 4 + 8 + 2).
+- Bonificación por agilidad (se mide al pulsar VALIDAR Y FINALIZAR):
+  - Estaciones 1, 2, 4 y 5: ≤ 5:00 → +6 · ≤ 8:00 → +5 · ≤ 11:00 → +4 · ≤ 12:30 → +3
+  - Estación 3 (procedimiento físico con AbThera™): ≤ 7:00 → +6 · ≤ 9:30 → +5 · ≤ 11:30 → +4 · ≤ 12:30 → +3
+- Lo que antes estaba en las paredes aparece en pantalla (tablero de tiempos, excepciones, check-list de cierre, parámetros de Prevena™).
+- Aplicación Prevena™ (Prueba 5.3) dentro del celular, con código de activación.
+- Voz automática del dispositivo; se elige una voz masculina de español latinoamericano cuando existe. La voz viene activada en el celular del Comandante.
 
-- Usar en una tablet en horizontal. También funciona en celular.
-- La partida queda guardada en el dispositivo. Para empezar de cero: en la línea de tiempo, pulsar dos veces **Reiniciar partida**.
-- Para probar sin esperar el reloj de pistas, se puede bajar `pistasSegundos` en `js/contenido.js`.
+## Modo demo y modo en vivo
 
-## Estado
+- Sin configurar la base de datos, el juego funciona en **modo demo**: todo vive en un solo navegador. Para mostrarlo, abran `consola.html` en una pestaña y el juego en otras (cada pestaña es un jugador). PIN de reinicio en demo: `0000`.
+- Para jugar con celulares reales: crear un proyecto gratuito en Supabase, ejecutar `supabase/instalar.sql` y pegar la URL y la clave pública en `js/config.js`.
 
-| Cámara | Estado |
-|---|---|
-| E1 · El Umbral del Trauma | Prototipo funcional |
-| E2 · El Enigma del Vacío | Pendiente |
-| E3 · El Taller del Cronógrafo | Pendiente |
-| E4 · El Vínculo de Vigilancia | Pendiente |
-| E5 · El Salto Temporal | Pendiente |
-
-## Reglas de juego implementadas
-
-- Recorrido obligatorio E1 → E2 → E3 → E4 → E5. Una cámara se abre solo al cerrar la anterior.
-- 12 minutos por cámara, reloj visible. Al llegar a cero se pierde la bonificación pero se puede terminar.
-- Puntaje por cámara: 20 puntos = códigos (4 + 4 + 4 + 2) + bonificación por tiempo (6 / 5 / 4 / 3).
-- Cada código tiene 3 intentos con puntos. Después, el Guía puede **liberar** el código (0 puntos) para que la misión no se detenga, igual que haría el facilitador humano con un candado.
-- Pistas en 3 niveles según el tiempo sin avanzar en un paso (2, 4 y 6 minutos). La tercera es directa y descuenta 1 punto.
-- Mensajes de error según el tipo de equivocación, sin revelar la respuesta.
-- Voz del guía con la síntesis de voz del navegador (botón SONIDO para silenciar).
-
-## Estructura
+## Archivos
 
 ```
-index.html         Página
-css/estilos.css    Diseño visual
-js/contenido.js    TODO el contenido del juego: textos, pasos, pistas, códigos, debriefing
-js/app.js          Lógica de la plataforma (no hace falta tocarla para cambiar contenido)
+index.html · consola.html
+js/contenido.js   TODO el contenido: tarjetas, códigos, puntos, bandas, retroalimentación
+js/huellas.js     Respuestas cifradas (SHA-256), no editar a mano
+js/app.js         Consola de misión (celular)
+js/consola.js     Consola de resultados
+js/prevena.js     Aplicación Prevena™
+js/datos.js       Conexión con la base de datos (Supabase o demo)
+js/config.js      URL y clave de Supabase
+supabase/instalar.sql
 ```
-
-Las respuestas de los códigos no están escritas en claro en `contenido.js`: se guarda su huella (SHA-256). Para cambiar una respuesta hay que regenerar la huella.
 
 ## Pendientes de contenido (revisión con el cliente)
 
-- Prueba 1.1: la tarjeta original pide "4 acciones del ABC", pero las fichas físicas son indicaciones de abdomen abierto. El prototipo sigue las fichas.
-- Reporte de laparotomía: se retiraron las fechas (2005 / nacimiento 1988 no daban 38 años).
-- Mecánica 1.1 decía impacto izquierdo; se unificó a derecho.
-
-Las tipografías están alojadas en el propio sitio (carpeta `fonts/`, licencia SIL OFL): el juego no depende de Google Fonts ni del wifi del salón para verse bien.
+- Clave de la Estación 3: el documento dice "125-8 (o 120)"; la resta da **117**, que es la que está programada.
+- Estación 5: el documento deja "1257 o 125" y "6 o 5"; están programados **1257** y **6**.
+- Pasos de la aplicación Prevena™: borrador, debe validarlos Solventum.
+- Opciones del tablero de tiempos de la E4 (6 h a 7 días): propuesta.
+- Pistas por estación: solo la E1 tiene pistas; las demás se cargarán tras la revisión.
+- Mensaje de desbloqueo de la E4: el documento decía "fase de estaciones concluida" (falta la E5); se ajustó.
