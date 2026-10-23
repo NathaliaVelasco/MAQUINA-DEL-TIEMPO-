@@ -118,7 +118,8 @@
     '<header class="cdr-cab">'
     + '<a class="cdr-marca" href="index.html" aria-label="Inicio"><img src="img/solventum-logo.png" alt="Solventum"></a>'
     + '<div class="cdr-cab-txt"><b>Cierre de Ruta</b><small>Máquina del Tiempo</small></div>'
-    + '<button class="btn-sonido" id="voz" type="button" aria-pressed="false">▶ Escuchar</button>'
+    + '<button class="btn-sonido" id="sonido" type="button" aria-pressed="false">♪</button>'
+    + '<button class="btn-sonido" id="voz" type="button" aria-pressed="false" aria-label="Escuchar">▶<span class="txt-largo"> Escuchar</span></button>'
     + '</header>'
     + '<nav class="cdr-ruta" id="ruta" aria-label="Las 5 postales"></nav>'
     + '<main class="cdr-escena" id="escena"></main>';
@@ -126,6 +127,8 @@
   const $ruta = document.getElementById('ruta');
   const $escena = document.getElementById('escena');
   const $voz = document.getElementById('voz');
+  const S = window.SONIDO_RUTA || { giro() {}, bajar() {}, encender() {}, enlazar() {} };
+  S.enlazar(document.getElementById('sonido'));
 
   /* ------------------------------------------------------------ la ruta */
   function pintarRuta() {
@@ -232,6 +235,7 @@
     n = Math.max(0, Math.min(TOTAL + 1, n));
     if (n === indice || ocupado) return;
     const dir = n > indice ? 1 : -1;
+    S.giro();
     indice = n; cara = 'frente';
     if (reducido) { pintar(); return; }
     ocupado = true;
@@ -248,6 +252,7 @@
   function girar() {
     if (ocupado || indice < 1 || indice > TOTAL) return;
     callar();
+    S.giro();
     const art = document.getElementById('postal');
     if (reducido || !art) { cara = cara === 'frente' ? 'reverso' : 'frente'; pintar(); return; }
     ocupado = true;
@@ -265,7 +270,11 @@
 
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-ir]');
-    if (b) { ir(parseInt(b.getAttribute('data-ir'), 10)); return; }
+    if (b) {
+      // al iniciar el recorrido se enciende el ambiente, salvo que la persona lo haya apagado antes
+      if (indice === 0 && !S.activo) { let pref = null; try { pref = localStorage.getItem('mdt-cdr-sonido'); } catch (e2) {} if (pref !== '0') S.encender(); }
+      ir(parseInt(b.getAttribute('data-ir'), 10)); return;
+    }
     if (e.target.closest('#girar')) girar();
     if (e.target.closest('#voz')) alternarVoz();
   });
@@ -295,7 +304,8 @@
   }
   function callar() {
     if (voz) voz.cancel();
-    $voz.textContent = '▶ Escuchar'; $voz.setAttribute('aria-pressed', 'false');
+    S.bajar(false);
+    $voz.innerHTML = '▶<span class="txt-largo"> Escuchar</span>'; $voz.setAttribute('aria-pressed', 'false');
   }
   function alternarVoz() {
     if (!voz) return;
@@ -307,9 +317,10 @@
     const u = new SpeechSynthesisUtterance(txt.replace(/™/g, ''));
     u.lang = 'es-CO'; u.rate = 1.05;
     const v = elegirVoz(); if (v) { u.voice = v; u.lang = v.lang; }
-    u.onend = u.onerror = () => { $voz.textContent = '▶ Escuchar'; $voz.setAttribute('aria-pressed', 'false'); };
+    u.onend = u.onerror = () => { S.bajar(false); $voz.innerHTML = '▶<span class="txt-largo"> Escuchar</span>'; $voz.setAttribute('aria-pressed', 'false'); };
+    S.bajar(true);
     voz.speak(u);
-    $voz.textContent = '■ Detener'; $voz.setAttribute('aria-pressed', 'true');
+    $voz.innerHTML = '■<span class="txt-largo"> Detener</span>'; $voz.setAttribute('aria-pressed', 'true');
   }
   if (!voz) $voz.remove();
 
