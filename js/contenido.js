@@ -32,7 +32,7 @@ window.CONTENIDO = {
       copiloto:   { nombre: 'Copiloto', subtitulo: 'Custodio del Registro Manual', cupo: 1,
                     mision: ['Llevar el registro riguroso en el cuaderno de campo.', 'Anotar pistas, variables clínicas y deducciones del grupo.', 'Custodiar el historial físico de la misión.'] },
       comandante: { nombre: 'Comandante de Misión', subtitulo: 'Custodio Digital', cupo: 1,
-                    mision: ['Custodiar y operar el celular de la Consola de Misión.', 'Digitar códigos de validación y claves numéricas obtenidas.', 'Confirmar y enviar los resultados en cada estación.'] },
+                    mision: ['Custodiar y operar el celular de la Sala de Escape.', 'Digitar códigos de validación y claves numéricas obtenidas.', 'Confirmar y enviar los resultados en cada estación.'] },
       tripulante: { nombre: 'Tripulante de Élite', subtitulo: 'Especialista Hands-On & Análisis', cupo: 4,
                     mision: ['Inspeccionar minuciosamente el material táctico de la maleta.', 'Descifrar acertijos y analizar los casos clínicos.', 'Ejecutar las maniobras prácticas y el ensamblaje.'] }
     },
@@ -43,7 +43,7 @@ window.CONTENIDO = {
       'Bienvenidos, doctores. Deténganse un segundo justo ahí... en el umbral exacto donde el presente se encuentra con el futuro.',
       'Lo que ven a su alrededor no es una capacitación ordinaria: es la entrada a un laberinto temporal. A partir de este instante, el quirófano deja de ser un espacio rígido de cuatro paredes para convertirse en un nexo donde el tiempo se mide en decisiones de alta precisión.',
       'Hoy, un paciente masculino de 38 años acaba de ingresar a nuestro sistema tras un colapso masivo en carretera. En la línea de tiempo convencional, la de las prácticas del pasado, las decisiones apresuradas lo condenarían a un año de complicaciones: hernias gigantes, fístulas, infecciones o un abdomen congelado.',
-      'Pero ustedes no están aquí para seguir el curso ordinario de la historia. Están aquí para cambiarla. Su Credencial de Misión los acredita ante los guardianes de cada cámara del laberinto. Y en esta Consola Digital de Misión registrarán los códigos, las claves de bioingeniería y las respuestas clínicas que descifren. Cada código correcto alterará el destino del paciente en tiempo real.'
+      'Pero ustedes no están aquí para seguir el curso ordinario de la historia. Están aquí para cambiarla. Su Credencial de Misión los acredita ante los guardianes de cada cámara del laberinto. Y en esta Sala de Escape digital registrarán los códigos, las claves de bioingeniería y las respuestas clínicas que descifren. Cada código correcto alterará el destino del paciente en tiempo real.'
     ],
     reglas: [
       'En cada estación encontrarán una serie de pistas en la maleta: enigmas clínicos, cajas con candados y la tecnología de Solventum.',
@@ -370,7 +370,7 @@ window.CONTENIDO = {
           ],
           mision: [
             ['Abrir la aplicación Prevena™', 'Abran la aplicación Prevena™ de Solventum en uno o varios celulares de la tripulación (iPhone o Android) y sigan el paso a paso: preparación del lecho incisional, posicionamiento del apósito, sellado de bordes y activación del vacío.'],
-            ['Consolidar las ventajas clínicas', 'Al completar el flujo, revisen en esta consola la evidencia de las ventajas de Prevena™ en la incisión de laparotomía. Cuenten las ventajas verificadas y registren sus símbolos, en orden, en la bitácora.']
+            ['Consolidar las ventajas clínicas', 'Al completar el flujo, revisen en la Sala de Escape la evidencia de las ventajas de Prevena™ en la incisión de laparotomía. Cuenten las ventajas verificadas y registren sus símbolos, en orden, en la bitácora.']
           ],
           atencion: 'No esperen la complicación para actuar. En laparotomías de alta tensión, la protección de la incisión es una decisión crítica desde el cierre.',
           pantalla: [{ tipo: 'appPrevena' }, { tipo: 'ventajas', titulo: 'Evidencia · Ventajas de Prevena™ en la incisión de laparotomía' }],

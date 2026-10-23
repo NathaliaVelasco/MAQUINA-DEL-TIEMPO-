@@ -1,5 +1,5 @@
 /* ==========================================================================
-   KIT DE TRIPULACIÓN · celular de cada participante
+   PÓRTICO DE ENTRADA · celular de cada participante
    Registro: grupo, nombre completo, profesión, rol y autorización de datos.
    ========================================================================== */
 (function () {
@@ -13,15 +13,15 @@
 
   function pinta(html) { app.innerHTML = html; }
   function cab() {
-    return '<header class="cabecera">' + M.logo() + '<div class="titulo-cab"><b>' + M.esc(J.titulo) + '</b><small>Kit de tripulación</small></div></header>';
+    return '<header class="cabecera">' + M.logo() + '<div class="titulo-cab"><b>' + M.esc(J.titulo) + '</b><small>Pórtico de Entrada</small></div></header>';
   }
 
   /* ---------- 1. Código de acceso ---------- */
   function pAcceso(err) {
     pinta(cab() + '<main class="pagina">'
       + '<section class="hud">' + M.logo('logo-portal')
-      + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Kit de tripulación</p>'
-      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(codigo) + '" placeholder="El que les entregó el facilitador"></label>'
+      + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Pórtico de Entrada</p>'
+      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(codigo) + '" placeholder="El que les entregó el Guía Especialista"></label>'
       + '<p class="error" id="err">' + M.esc(err || '') + '</p>'
       + '<button class="btn primario ancho grande" type="submit">ENTRAR →</button></form>'
       + '</section></main>');
@@ -106,7 +106,7 @@
       + '<div class="nombre">' + M.esc(registro.nombre) + '</div>'
       + '<p class="sobretitulo">Misión operativa</p><ul>' + r.mision.map(x => '<li>' + M.esc(x) + '</li>').join('') + '</ul>'
       + (registro.rol === 'comandante'
-          ? '<div class="acciones"><a class="btn primario grande latido" href="' + M.esc(M.urlDe('consola.html', { grupo: registro.grupo })) + '">ABRIR LA CONSOLA DE MISIÓN →</a></div>'
+          ? '<div class="acciones"><a class="btn primario grande latido" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">ENTRAR A LA SALA DE ESCAPE →</a></div>'
             + '<p class="suave" style="margin-top:10px;font-size:13px">Usted digita los códigos del grupo. Mantenga este celular con batería y conexión.</p>'
           : '<p class="suave" style="margin-top:16px;font-size:14px">El Comandante de Misión conduce el juego desde su celular.</p>')
       + '</section>'

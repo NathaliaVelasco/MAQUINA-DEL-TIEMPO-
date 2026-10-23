@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CONSOLA DEL EQUIPO · celular del Comandante de Misión
+   SALA DE ESCAPE · celular del Comandante de Misión
    Bienvenida del Guardián → Estaciones 1 a 5 en orden → cierre final.
    El reloj, los intentos y los puntos los controla el servidor.
    ========================================================================== */
@@ -28,7 +28,7 @@
   function cab(sub, conReloj) {
     const g = M.grupo(cfg.grupo);
     return '<header class="cabecera' + (conReloj ? ' con-reloj' : '') + '">' + M.logo()
-      + '<div class="titulo-cab"><b>' + M.esc(sub || J.titulo) + '</b><small style="color:' + g.color + '">' + M.esc(g.nombre || 'Consola del equipo') + '</small></div>'
+      + '<div class="titulo-cab"><b>' + M.esc(sub || J.titulo) + '</b><small style="color:' + g.color + '">' + M.esc(g.nombre || 'Sala de Escape') + '</small></div>'
       + (conReloj ? '<div class="reloj" id="reloj">--:--</div>' : '')
       + '<button class="btn-sonido" data-a="voz" aria-label="Ajustes de voz">VOZ</button>'
       + '<button class="btn-sonido" data-a="sonido">' + (M.sonido ? 'SONIDO ON' : 'SONIDO OFF') + '</button>'
@@ -72,13 +72,13 @@
   /* ----------------------------------------------------------- 1. acceso */
   function pAcceso(err) {
     const opGrupos = J.grupos.map(g => '<button type="button" class="opcion ' + (cfg.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '"><span class="simbolo">' + g.simbolo + '</span><span>' + M.esc(g.nombre) + '</span></button>').join('');
-    pinta(cab('Consola del equipo') + '<main class="pagina"><section class="hud">' + M.logo('logo-portal')
-      + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Consola del equipo</p>'
-      + '<p class="suave centro" style="margin-bottom:18px">Solo el Comandante de Misión (Custodio Digital) usa esta consola.</p>'
-      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(cfg.codigo || '') + '" placeholder="El que les entregó el facilitador"></label>'
+    pinta(cab('Sala de Escape') + '<main class="pagina"><section class="hud">' + M.logo('logo-portal')
+      + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Sala de Escape</p>'
+      + '<p class="suave centro" style="margin-bottom:18px">Solo el Comandante de Misión (Custodio Digital) usa la Sala de Escape.</p>'
+      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(cfg.codigo || '') + '" placeholder="El que les entregó el Guía Especialista"></label>'
       + '<div class="campo"><span>Su grupo</span><div class="opciones">' + opGrupos + '</div></div>'
       + '<p class="error">' + M.esc(err || '') + '</p>'
-      + '<button class="btn primario ancho grande" type="submit">ACCEDER A LA CONSOLA →</button></form>'
+      + '<button class="btn primario ancho grande" type="submit">ENTRAR A LA SALA DE ESCAPE →</button></form>'
       + '</section></main>');
     app.querySelectorAll('[data-grupo]').forEach(b => b.onclick = () => { cfg.codigo = document.getElementById('cod').value; cfg.grupo = b.dataset.grupo; pAcceso(err); });
     document.getElementById('f').onsubmit = ev => {
@@ -96,13 +96,13 @@
     const g = M.grupo(cfg.grupo), t = E.tripulantes || [];
     let lista = t.map(x => '<li><span>' + M.esc(x.nombre) + '</span><span>' + M.esc(M.rol(x.rol).nombre) + '</span></li>').join('');
     for (let i = t.length; i < 7; i++) lista += '<li class="vacio"><span>Esperando tripulante…</span><span></span></li>';
-    pinta(cab('Pórtico de ingreso') + '<main class="pagina">'
+    pinta(cab('Bienvenida') + '<main class="pagina">'
       + '<section class="hud" id="guardian">' + guardian('El Guardián de la Línea del Tiempo')
       + J.bienvenida.map(p => '<p class="texto-guardian">' + M.esc(p) + '</p>').join('')
       + '<div class="acciones"><button class="btn contorno" data-a="escucharBienvenida">▶ ESCUCHAR AL GUARDIÁN</button></div></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Reglas del laberinto</p><ul class="lista-tripulacion">' + J.reglas.map(r => '<li><span>' + M.esc(r) + '</span></li>').join('') + '</ul></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + ' (' + t.length + '/7)</p><ul class="lista-tripulacion">' + lista + '</ul>'
-      + '<p class="suave" style="font-size:13px;margin-top:10px">Los integrantes se registran desde el Kit de tripulación en su propio celular.</p>'
+      + '<p class="suave" style="font-size:13px;margin-top:10px">Los integrantes se registran desde el Pórtico de Entrada en su propio celular.</p>'
       + '<div class="acciones"><button class="btn fantasma pequeno" data-a="actualizar">Actualizar tripulación</button></div></section>'
       + '<section class="bloque centro"><p class="texto-guardian" style="color:var(--malachite)">' + M.esc(J.portal) + '</p>'
       + '<div class="acciones"><button class="btn primario grande ancho" data-a="cruzar">CRUZAR EL PORTAL →</button></div></section>'
@@ -111,6 +111,7 @@
   }
   function hablarBienvenida() {
     const caja = document.getElementById('guardian'); if (caja) caja.classList.add('hablando');
+    M.SFX.impacto();
     M.decir(J.bienvenida.join(' ') + ' ' + J.portal, () => { const c = document.getElementById('guardian'); if (c) c.classList.remove('hablando'); });
   }
 
@@ -235,7 +236,7 @@
         + (ap.url
           ? '<p style="margin-bottom:12px">Cualquier tripulante puede abrirla en su celular (iPhone o Android).</p><a class="btn primario grande ancho" href="' + M.esc(ap.url) + '" target="_blank" rel="noopener">ABRIR APLICACIÓN PREVENA™ ↗</a>'
           : '<p>El Guía Especialista les indicará cómo abrir la aplicación Prevena™ en sus celulares (iPhone o Android).</p>')
-        + '<p class="suave" style="font-size:13px;margin-top:10px">Completen el paso a paso y vuelvan a esta consola.</p></section></div>';
+        + '<p class="suave" style="font-size:13px;margin-top:10px">Completen el paso a paso y vuelvan a la Sala de Escape.</p></section></div>';
     }
     if (m.tipo === 'ventajas') {
       const v = ventajas;
@@ -397,6 +398,7 @@
     const c = contenido(vista.est), x = est(vista.est);
     const g = document.getElementById('guardian'); if (g) g.classList.add('hablando');
     const intro = x.estado === 'agotada' ? 'El reloj cerró la estación. ' : c.desbloqueo.titulo + ' ';
+    M.SFX.impacto();
     M.decir(intro + c.cierre, () => { const h = document.getElementById('guardian'); if (h) h.classList.remove('hablando'); });
   }
 
@@ -409,7 +411,7 @@
       + '<table class="tabla-puntos"><tbody>' + filas + '</tbody></table></section>'
       + '<section class="hud bloque" id="guardian">' + guardian('El Guardián de la Línea del Tiempo') + '<p class="frase-cierre">' + M.esc(J.final.frase) + '</p>'
       + '<div class="acciones"><button class="btn contorno" data-a="escucharFinal">▶ ESCUCHAR</button></div></section>'
-      + '<p class="suave centro" style="margin-top:16px">Miren el Pórtico para conocer al grupo ganador.</p></main>');
+      + '<p class="suave centro" style="margin-top:16px">Miren El Gran Tablero para conocer al grupo ganador.</p></main>');
     M.decir(J.final.mensaje + ' ' + J.final.frase);
     try {
       const t = await M.rpc('mdt_tablero', {});
@@ -424,7 +426,9 @@
     const vs = M.voces;
     const html = '<div class="modal" id="modal"><section class="hud"><p class="sobretitulo">Voz del Guardián</p>'
       + '<p class="suave" style="font-size:14px">Se elige automáticamente una voz masculina en español latinoamericano cuando el celular la tiene. Si suena una voz femenina, elijan otra de la lista (las marcadas con ♂ son masculinas).</p>'
-      + '<div class="lista-voces">' + (vs.length ? vs.map(v => '<button data-voz="' + M.esc(v.voiceURI) + '" class="' + (M.vozElegida && M.vozElegida.voiceURI === v.voiceURI ? 'sel' : '') + '">' + (M.esMasculina(v) ? '♂ ' : '') + M.esc(v.name) + '<small>' + M.esc(v.lang) + '</small></button>').join('') : '<p class="suave">Este navegador no tiene voces en español.</p>') + '</div>'
+      + '<p class="sobretitulo" style="margin-top:12px">Velocidad</p><div class="opciones-vel">'
+      + [['normal', 'Normal'], ['agil', 'Ágil'], ['rapida', 'Rápida']].map(v => '<button data-vel="' + v[0] + '" class="' + (M.velocidad === v[0] ? 'sel' : '') + '">' + v[1] + '</button>').join('') + '</div>'
+      + '<p class="sobretitulo" style="margin-top:12px">Voz</p><div class="lista-voces">' + (vs.length ? vs.map(v => '<button data-voz="' + M.esc(v.voiceURI) + '" class="' + (M.vozElegida && M.vozElegida.voiceURI === v.voiceURI ? 'sel' : '') + '">' + (M.esMasculina(v) ? '♂ ' : '') + M.esc(v.name) + '<small>' + M.esc(v.lang) + '</small></button>').join('') : '<p class="suave">Este navegador no tiene voces en español.</p>') + '</div>'
       + '<div class="acciones"><button class="btn primario" data-a="cerrarModal">LISTO</button></div></section></div>';
     app.insertAdjacentHTML('beforeend', html);
   }
@@ -434,6 +438,8 @@
   app.addEventListener('click', ev => {
     const tab = ev.target.closest('[data-tab]');
     if (tab) { M.callar(); vista.tab = +tab.dataset.tab; pEstacion(); window.scrollTo(0, 0); const c = contenido(vista.est), p = c.pruebas[vista.tab]; if (p && !local[clave('oida-' + p.id)]) { local[clave('oida-' + p.id)] = 1; guardarLocal(); M.decir(textoTarjeta(c, p)); } return; }
+    const vel = ev.target.closest('[data-vel]');
+    if (vel) { M.elegirVelocidad(vel.dataset.vel); app.querySelectorAll('[data-vel]').forEach(b => b.classList.toggle('sel', b === vel)); M.decir('Doctores, el reloj ya está corriendo.'); return; }
     const v = ev.target.closest('[data-voz]');
     if (v) { M.elegirVoz(v.dataset.voz); app.querySelectorAll('[data-voz]').forEach(b => b.classList.toggle('sel', b === v)); M.decir('Esta es la voz del Guardián de la Línea del Tiempo.'); return; }
     const b = ev.target.closest('[data-a]'); if (!b) return;

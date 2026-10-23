@@ -1,6 +1,6 @@
 /* ==========================================================================
-   PÓRTICO · pantalla grande con los resultados de los 4 grupos en vivo
-   El botón FACILITADOR lleva al panel de administración (facilitador.html).
+   EL GRAN TABLERO · pantalla grande con los resultados de los 4 grupos en vivo
+   El botón GUÍA ESPECIALISTA lleva al panel de administración (guia.html).
    ========================================================================== */
 (function () {
   'use strict';
@@ -47,14 +47,14 @@
             + '<div class="mini-linea">' + mini + '</div></article>';
         }).join('') + '</section>';
     app.innerHTML = '<main class="portico">'
-      + '<header class="portico-cab">' + M.logo() + '<div><h1>' + M.esc(J.titulo) + '</h1><small>' + M.esc(J.subtitulo) + ' · Resultados en vivo</small></div>'
+      + '<header class="portico-cab">' + M.logo() + '<div><h1>' + M.esc(J.titulo) + '</h1><small>El Gran Tablero · Resultados en vivo</small></div>'
       + '<div class="derecha" id="hora"></div></header>'
       + cuerpo
       + '<footer class="portico-pie">'
-      + '<div class="qr">' + qrSVG(base + 'kit.html') + '<div><b>Kit de tripulación</b><span>Todos: regístrense aquí</span></div></div>'
-      + '<div class="qr">' + qrSVG(base + 'consola.html') + '<div><b>Consola del equipo</b><span>Solo el Comandante de Misión</span></div></div>'
+      + '<div class="qr">' + qrSVG(base + 'entrada.html') + '<div><b>Pórtico de Entrada</b><span>Todos: regístrense aquí</span></div></div>'
+      + '<div class="qr">' + qrSVG(base + 'sala.html') + '<div><b>Sala de Escape</b><span>Solo el Comandante de Misión</span></div></div>'
       + '</footer>'
-      + '<a class="btn fantasma pequeno admin-btn" href="facilitador.html">⚙ FACILITADOR</a>'
+      + '<a class="btn fantasma pequeno admin-btn" href="guia.html">⚙ GUÍA ESPECIALISTA</a>'
       + '</main>';
     revisarGanador();
   }

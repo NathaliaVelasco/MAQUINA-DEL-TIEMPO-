@@ -26,7 +26,7 @@
   }
   function mensajeError(e) {
     const m = (e && e.message) || String(e);
-    if (m === 'SIN_SERVIDOR') return 'La plataforma aún no está conectada a su base de datos. Avisen al facilitador.';
+    if (m === 'SIN_SERVIDOR') return 'La plataforma aún no está conectada a su base de datos. Avisen al Guía Especialista.';
     if (m === 'SIN_RED') return 'Sin conexión. Revisen el wifi o los datos del celular e inténtenlo de nuevo.';
     return m.replace(/^(OCUPADA|CERRADA):/, '');
   }
@@ -80,6 +80,7 @@
     tic() { tono(1400, 0.04, 'square', 0.04); },
     candado() { tono(300, 0.08, 'square', 0.12); tono(420, 0.08, 'square', 0.12, 0.09); tono(880, 0.4, 'triangle', 0.16, 0.2); },
     monitor(n) { for (let i = 0; i < n; i++) tono(1046, 0.09, 'sine', 0.09, i * (60 / 130)); },
+    impacto() { tono(55, 0.9, 'sine', 0.3); tono(110, 0.5, 'triangle', 0.12, 0.02); tono(880, 0.25, 'sine', 0.05, 0.05); },
     portal() { tono(220, 0.6, 'sine', 0.12); tono(330, 0.6, 'sine', 0.1, 0.15); tono(440, 0.9, 'triangle', 0.12, 0.3); }
   };
 
@@ -108,29 +109,44 @@
   if ('speechSynthesis' in window) { cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
   const esMasculina = v => !!v && (MASCULINAS.test(v.name) || MASCULINAS.test(v.voiceURI || ''));
   let colaVoz = 0;
+  /* Velocidad de la voz: el Comandante la cambia en Ajustes de voz. */
+  const VELOCIDADES = { normal: 1.0, agil: 1.15, rapida: 1.3 };
+  let velocidad = leer('velocidad', 'agil');
+  /* Une las frases en bloques largos: cada bloque nuevo es una pausa del
+     motor de voz, y muchas pausas hacen que el Guardián suene lento. */
+  function bloques(texto) {
+    const frases = String(texto).replace(/™/g, '').replace(/\s+/g, ' ').match(/[^.!?]+[.!?]*/g) || [String(texto)];
+    const out = []; let actual = '';
+    frases.forEach(f => {
+      if ((actual + ' ' + f).length > 220 && actual) { out.push(actual.trim()); actual = f; }
+      else actual += ' ' + f;
+    });
+    if (actual.trim()) out.push(actual.trim());
+    return out;
+  }
   function decir(texto, alTerminar) {
     if (!sonido || !('speechSynthesis' in window) || !texto) { if (alTerminar) alTerminar(); return; }
     speechSynthesis.cancel();
-    const id = ++colaVoz;
-    /* Los motores cortan los textos largos: se habla por frases. */
-    const partes = String(texto).replace(/™/g, '').match(/[^.!?¡¿]+[.!?]*|[¡¿][^.!?]+[.!?]*/g) || [texto];
+    const id = ++colaVoz, partes = bloques(texto);
     partes.forEach((p, i) => {
-      const u = new SpeechSynthesisUtterance(p.trim());
+      const u = new SpeechSynthesisUtterance(p);
       u.lang = vozElegida ? vozElegida.lang : 'es-MX';
       if (vozElegida) u.voice = vozElegida;
-      u.rate = 0.98;
-      u.pitch = esMasculina(vozElegida) ? 0.95 : 0.8;   // sin voz masculina: tono más grave
+      u.rate = VELOCIDADES[velocidad] || 1.15;
+      u.pitch = esMasculina(vozElegida) ? 0.9 : 0.78;   // sin voz masculina: tono más grave
+      u.volume = 1;
       if (i === partes.length - 1 && alTerminar) u.onend = () => { if (id === colaVoz) alTerminar(); };
       speechSynthesis.speak(u);
     });
   }
+  function elegirVelocidad(v) { if (VELOCIDADES[v]) { velocidad = v; guardar('velocidad', v); } }
   function callar() { colaVoz++; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
   function alternarSonido() { sonido = !sonido; guardar('sonido', sonido); if (!sonido) callar(); return sonido; }
   function elegirVoz(uri) { guardar('voz', uri); cargarVoces(); }
 
   window.MDT = {
     C, rpc, mensajeError, guardar, leer, dispositivo, esc, mmss, grupo, estacion, rol, logo, urlDe,
-    sincronizar, ahora, audio, SFX, decir, callar, alternarSonido, elegirVoz, esMasculina,
-    get sonido() { return sonido; }, get voces() { return voces; }, get vozElegida() { return vozElegida; }
+    sincronizar, ahora, audio, SFX, decir, callar, alternarSonido, elegirVoz, elegirVelocidad, esMasculina,
+    get sonido() { return sonido; }, get velocidad() { return velocidad; }, get voces() { return voces; }, get vozElegida() { return vozElegida; }
   };
 })();

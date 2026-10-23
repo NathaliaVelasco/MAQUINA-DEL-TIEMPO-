@@ -9,10 +9,11 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Pantalla | Archivo | Quién la usa |
 |---|---|---|
 | Inicio | `index.html` | Acceso a todo |
-| Kit de tripulación | `kit.html` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
-| Consola del equipo | `consola.html` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
-| Pórtico | `portico.html` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
-| Panel del facilitador | `facilitador.html` | Administrador del juego (con PIN): genera el código de acceso, QR con el código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, descarga CSV y cambio de PIN |
+| Demo del ecosistema | `demo.html` | Recorrido guiado para presentar: los 7 momentos, las 4 pantallas funcionando en vivo y los roles |
+| Pórtico de Entrada | `entrada.html` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
+| Sala de Escape | `sala.html` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
+| El Gran Tablero | `tablero.html` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
+| Guía Especialista | `guia.html` | Administrador del juego (con PIN): genera el código de acceso, QR con el código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, descarga CSV y cambio de PIN |
 
 ## Reglas implementadas (las controla el servidor)
 
@@ -25,7 +26,9 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
   - E3 (procedimiento físico con AbThera™): ≤ 6:00 → +6 · ≤ 9:00 → +5 · ≤ 11:30 → +4 · ≤ 12:30 → +3
 - Lo que antes estaba en las paredes aparece en pantalla: monitor de signos vitales, tablero de tiempos, situaciones de UCI, check-list de cierre, archivo técnico de Prevena™ y la imagen de evidencia con las 6 ventajas y el sello NP2010 (se muestra al resolver el código 5.2).
 - La aplicación Prevena™ es del cliente (desarrollo externo): la consola solo enlaza a ella. El enlace va en `appPrevena.url` dentro de `js/contenido.js`.
-- Voz automática del dispositivo: se elige una voz masculina en español latinoamericano cuando existe (botón VOZ para cambiarla).
+- Voz automática del dispositivo: se elige una voz masculina en español latinoamericano cuando existe. Velocidad ágil por defecto (botón VOZ: voz y velocidad Normal / Ágil / Rápida).
+- Fondo dinámico (`js/fondo.js`): barrido de radar, pulsos, partículas y línea de escaneo; se pausa cuando la pantalla no está visible.
+- Los enlaces antiguos (`kit.html`, `consola.html`, `portico.html`, `facilitador.html`) redirigen a los nuevos nombres.
 - Las respuestas **no están en este repositorio**: se cargan en la base de datos con un archivo privado.
 
 ## Base de datos (Supabase)
