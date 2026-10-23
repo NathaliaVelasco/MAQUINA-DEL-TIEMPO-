@@ -1,11 +1,12 @@
 /* ==========================================================================
    GUÍA ESPECIALISTA · administrador del juego (con PIN)
-   - Genera y cambia el código de acceso de los participantes.
+   - Genera y cambia los dos códigos: registro (Pórtico de Entrada) y
+     Sala de Escape (solo el Comandante).
    - Muestra los QR del Pórtico de Entrada y de la Sala de Escape (con el código).
    - Abre una nueva sesión (El Gran Tablero en cero) para el siguiente turno.
    - Ve los 4 grupos en vivo: tripulantes, estación actual, reloj y puntos.
    - Reinicia o borra un grupo ante una falla técnica.
-   - Descarga los resultados (CSV) y cambia el PIN.
+   - Descarga los resultados en Excel (sesión actual o histórico) y cambia el PIN.
    Metodología y diseño del juego: Nathalia Velasco · Simoné
    ========================================================================== */
 (function () {
@@ -16,7 +17,7 @@
 
   const base = location.href.replace(/[^/]*(\?.*)?$/, '');
   const enlaceKit = () => base + 'entrada.html?c=' + encodeURIComponent(P.codigo_acceso);
-  const enlaceConsola = () => base + 'sala.html?c=' + encodeURIComponent(P.codigo_acceso);
+  const enlaceConsola = () => base + 'sala.html?c=' + encodeURIComponent(P.codigo_sala);
   const enlacePortico = () => base + 'tablero.html';
   const ROLES = { piloto: 'Líder Piloto', copiloto: 'Copiloto', comandante: 'Comandante', tripulante: 'Tripulante de Élite' };
 
@@ -97,17 +98,22 @@
       + (msg.texto ? '<p class="' + (msg.error ? 'error' : 'ok-msg') + ' aviso-admin">' + M.esc(msg.texto) + '</p>' : '')
 
       /* 1. Claves */
-      + '<section class="hud bloque"><p class="sobretitulo">1 · Código de acceso de los participantes</p>'
-      + '<div class="clave-grande">' + M.esc(P.codigo_acceso) + '</div>'
-      + '<p class="suave" style="font-size:14px">Lo usan todos: el Pórtico de Entrada y la Sala de Escape. Sesión n.º ' + P.sesion + '.</p>'
-      + '<div class="acciones"><button class="btn primario" data-a="generar">GENERAR CÓDIGO NUEVO</button>'
-      + '<button class="btn contorno" data-a="propio">ESCRIBIR MI PROPIO CÓDIGO</button></div>'
-      + '<div id="propio"></div>'
-      + '<p class="suave" style="font-size:12px;margin-top:8px">Cambiar el código no borra nada; quienes ya están dentro siguen jugando. Úsenlo, por ejemplo, entre un turno y otro.</p></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">1 · Códigos de la sesión n.º ' + P.sesion + '</p>'
+      + '<div class="claves-admin">'
+      + '<div class="clave-caja"><small>Código de registro · Pórtico de Entrada</small><div class="clave-grande">' + M.esc(P.codigo_acceso) + '</div>'
+      + '<p class="suave" style="font-size:13px">Lo usan los 7 integrantes de cada grupo para registrarse.</p>'
+      + '<div class="acciones" style="justify-content:flex-start"><button class="btn primario pequeno" data-a="generar" data-t="registro">GENERAR NUEVO</button>'
+      + '<button class="btn contorno pequeno" data-a="propio" data-t="registro">ESCRIBIR EL MÍO</button></div><div id="propio-registro"></div></div>'
+      + '<div class="clave-caja"><small>Código de la Sala de Escape · solo Comandante</small><div class="clave-grande">' + M.esc(P.codigo_sala) + '</div>'
+      + '<p class="suave" style="font-size:13px">Lo usa el Comandante de Misión para entrar a jugar las estaciones.</p>'
+      + '<div class="acciones" style="justify-content:flex-start"><button class="btn primario pequeno" data-a="generar" data-t="sala">GENERAR NUEVO</button>'
+      + '<button class="btn contorno pequeno" data-a="propio" data-t="sala">ESCRIBIR EL MÍO</button></div><div id="propio-sala"></div></div>'
+      + '</div>'
+      + '<p class="suave" style="font-size:12px;margin-top:8px">Los dos códigos deben ser distintos. Cambiarlos no borra nada; quienes ya están dentro siguen jugando.</p></section>'
 
       /* 2. QR */
       + '<section class="hud bloque"><p class="sobretitulo">2 · Enlaces para los participantes</p>'
-      + '<p class="suave" style="font-size:14px;margin-bottom:12px">Los QR ya llevan el código de acceso. Proyéctenlos o imprímanlos.</p>'
+      + '<p class="suave" style="font-size:14px;margin-bottom:12px">Cada QR ya lleva su código. Proyéctenlos o imprímanlos. El de la Sala de Escape es solo para los Comandantes.</p>'
       + '<div class="qrs-admin">'
       + '<div class="qr"> ' + qrSVG(enlaceKit()) + '<div><b>Pórtico de Entrada</b><span>Todos los participantes</span><button class="btn fantasma pequeno" data-a="copiar" data-url="' + M.esc(enlaceKit()) + '">COPIAR ENLACE</button></div></div>'
       + '<div class="qr">' + qrSVG(enlaceConsola()) + '<div><b>Sala de Escape</b><span>Solo el Comandante de Misión</span><button class="btn fantasma pequeno" data-a="copiar" data-url="' + M.esc(enlaceConsola()) + '">COPIAR ENLACE</button></div></div>'
@@ -120,7 +126,9 @@
 
       /* 4. Sesión y resultados */
       + '<section class="hud bloque"><p class="sobretitulo">4 · Sesión y resultados</p>'
-      + '<div class="acciones" style="justify-content:flex-start"><button class="btn contorno" data-a="exportar">DESCARGAR RESULTADOS (CSV)</button></div>'
+      + '<div class="acciones" style="justify-content:flex-start"><button class="btn contorno" data-a="exportar" data-t="sesion">EXCEL DE ESTA SESIÓN</button>'
+      + '<button class="btn contorno" data-a="exportar" data-t="historico">EXCEL HISTÓRICO · TODAS LAS SESIONES</button></div>'
+      + '<p class="suave" style="font-size:12px;margin-top:6px">El Excel trae 3 pestañas: Puntajes (fecha, sesión, grupo, integrantes y puntos totales), Participantes y Estaciones.</p>'
       + '<div class="acciones" style="justify-content:flex-start"><button class="btn peligro" data-a="nuevaSesion">' + (confirmar.sesion ? '¿SEGURO? TOQUEN DE NUEVO' : 'NUEVA SESIÓN · TABLERO EN CERO') + '</button></div>'
       + '<p class="suave" style="font-size:12px;margin-top:6px">Descarguen los resultados antes de abrir una nueva sesión. La nueva sesión deja El Gran Tablero y los 4 grupos en cero para el siguiente turno; los registros anteriores quedan guardados en la base de datos.</p></section>'
 
@@ -138,18 +146,21 @@
   }
 
   /* Código fácil de dictar: palabra del juego + número de 4 cifras. */
-  function codigoAleatorio() {
-    const pal = ['CRONOS', 'PORTAL', 'VACIO', 'FASCIA', 'TIEMPO', 'NEXO', 'ORBITA', 'PULSO'];
+  function codigoAleatorio(tipo) {
+    const pal = tipo === 'sala' ? ['SALA', 'CAMARA', 'NUCLEO', 'VORTICE'] : ['CRONOS', 'PORTAL', 'FASCIA', 'TIEMPO', 'NEXO', 'ORBITA', 'PULSO'];
     const n = new Uint32Array(2); crypto.getRandomValues(n);
     return pal[n[0] % pal.length] + '-' + String(2000 + (n[1] % 7999));
   }
-  function csv(filas, nombre) {
-    if (!filas || !filas.length) return false;
-    const cols = Object.keys(filas[0]);
-    const lineas = [cols.join(';')].concat(filas.map(f => cols.map(c => '"' + String(f[c] == null ? '' : f[c]).replace(/"/g, '""') + '"').join(';')));
-    const blob = new Blob(['﻿' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
-    return true;
+  /* Excel con 3 pestañas. Columnas con ancho según el contenido. */
+  function excel(r, nombre) {
+    const wb = XLSX.utils.book_new();
+    [['Puntajes', r.puntajes], ['Participantes', r.participantes], ['Estaciones', r.estaciones]].forEach(h => {
+      const filas = h[1] || [];
+      const ws = filas.length ? XLSX.utils.json_to_sheet(filas) : XLSX.utils.aoa_to_sheet([['Sin datos']]);
+      if (filas.length) ws['!cols'] = Object.keys(filas[0]).map(k => ({ wch: Math.min(80, Math.max(k.length, ...filas.map(f => String(f[k] == null ? '' : f[k]).length)) + 2) }));
+      XLSX.utils.book_append_sheet(wb, ws, h[0]);
+    });
+    XLSX.writeFile(wb, nombre);
   }
   function confirmado(k) {
     if (confirmar[k] && Date.now() - confirmar[k] < 6000) { confirmar = {}; return true; }
@@ -161,13 +172,18 @@
     const a = b.dataset.a, g = b.dataset.g;
     try {
       if (a === 'salir') { pin = ''; try { sessionStorage.removeItem('mdt-pin'); } catch (e) {} return pIngreso(); }
-      if (a === 'generar') { const c = codigoAleatorio(); await admin('cambiar_codigo', c); aviso('Código nuevo: ' + c + '. Los QR ya están actualizados.'); return cargar(); }
+      if (a === 'generar') {
+        const t = b.dataset.t, c = codigoAleatorio(t);
+        await admin(t === 'sala' ? 'cambiar_codigo_sala' : 'cambiar_codigo', c);
+        aviso((t === 'sala' ? 'Código nuevo de la Sala de Escape: ' : 'Código nuevo de registro: ') + c + '. Los QR ya están actualizados.'); return cargar();
+      }
       if (a === 'propio') {
-        document.getElementById('propio').innerHTML = '<form id="fcod" class="fila-form" style="margin-top:12px"><input type="text" id="codPropio" class="entrada mayus" placeholder="Mínimo 4 caracteres" autocomplete="off" autocapitalize="characters"><button class="btn primario" type="submit">GUARDAR</button></form>';
+        const t = b.dataset.t;
+        document.getElementById('propio-' + t).innerHTML = '<form id="fcod" class="fila-form" style="margin-top:12px"><input type="text" id="codPropio" class="entrada mayus" placeholder="Mínimo 4 caracteres" autocomplete="off" autocapitalize="characters"><button class="btn primario" type="submit">GUARDAR</button></form>';
         const inp = document.getElementById('codPropio'); inp.focus();
         document.getElementById('fcod').onsubmit = async e2 => {
           e2.preventDefault();
-          try { await admin('cambiar_codigo', inp.value); aviso('Código guardado.'); await cargar(); }
+          try { await admin(t === 'sala' ? 'cambiar_codigo_sala' : 'cambiar_codigo', inp.value); aviso('Código guardado.'); await cargar(); }
           catch (e) { aviso(M.mensajeError(e), true); render(); }
         };
         return;
@@ -181,10 +197,11 @@
       if (a === 'reabrir') { if (!confirmado('reabrir' + g)) return; await admin('reabrir_grupo', g); aviso('Partida reiniciada: ' + M.grupo(g).nombre + '.'); return cargar(); }
       if (a === 'borrar') { if (!confirmado('borrar' + g)) return; await admin('borrar_grupo', g); aviso('Grupo borrado: ' + M.grupo(g).nombre + '.'); return cargar(); }
       if (a === 'exportar') {
-        const r = await admin('exportar'), f = new Date().toISOString().slice(0, 10);
-        const ok = csv(r.filas, 'maquina-del-tiempo-participantes-' + f + '.csv');
-        setTimeout(() => csv(r.estaciones, 'maquina-del-tiempo-estaciones-' + f + '.csv'), 600);
-        aviso(ok ? 'Descargando 2 archivos: participantes y estaciones.' : 'Todavía no hay participantes en esta sesión.'); return render(true);
+        const hist = b.dataset.t === 'historico';
+        const r = await admin('exportar', hist ? 'historico' : null);
+        if (!r.puntajes.length && !r.participantes.length) { aviso('Todavía no hay datos para descargar.'); return render(true); }
+        excel(r, 'maquina-del-tiempo-' + (hist ? 'historico' : 'sesion-' + P.sesion) + '-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+        aviso('Excel descargado' + (hist ? ' con el histórico de todas las sesiones.' : ' con la sesión n.º ' + P.sesion + '.')); return render(true);
       }
       if (a === 'nuevaSesion') { if (!confirmado('sesion')) return; await admin('nueva_sesion'); aviso('Nueva sesión abierta. El Gran Tablero está en cero.'); return cargar(); }
     } catch (e) {

@@ -10,7 +10,6 @@
   let cfg = M.leer('consola', {});
   if (params.get('grupo')) cfg.grupo = params.get('grupo');
   if (params.get('c')) cfg.codigo = params.get('c').toUpperCase();
-  if (!cfg.codigo) cfg.codigo = M.leer('codigo', '');
   let E = null;                  // estado del equipo que devuelve el servidor
   let pantalla = 'acceso', vista = { est: null, tab: 0 };
   let local = M.leer('consola-local', {});   // monitor revelado, marcas en pantalla, cierres vistos
@@ -44,7 +43,7 @@
   }
   function decidirPantalla() {
     const abierta = E.estaciones.find(x => x.estado === 'abierta');
-    if (abierta) { if (vista.est !== abierta.id) vista = { est: abierta.id, tab: 0 }; return 'estacion'; }
+    if (abierta) { if (vista.est !== abierta.id) vista = { est: abierta.id, tab: primeraPendiente(contenido(abierta.id)) }; return 'estacion'; }
     const sinCierre = E.estaciones.find(x => (x.estado === 'cerrada' || x.estado === 'agotada') && !(local[clave('cierre-' + x.id)]));
     if (sinCierre) { vista.est = sinCierre.id; return 'cierre'; }
     if (E.estaciones.every(x => x.estado !== 'pendiente')) return 'final';
@@ -54,7 +53,7 @@
   async function cargar() {
     try { await refrescar(); pantalla = decidirPantalla(); render(); }
     catch (e) {
-      if (/acceso incorrecto|tripulación registrada/i.test(e.message)) { pantalla = 'acceso'; return pAcceso(M.mensajeError(e)); }
+      if (/incorrecto|tripulación registrada/i.test(e.message)) { pantalla = 'acceso'; return pAcceso(M.mensajeError(e)); }
       pinta(cab() + '<main class="pagina"><section class="hud"><p class="error">' + M.esc(M.mensajeError(e)) + '</p><div class="acciones"><button class="btn primario" data-a="reintentar">REINTENTAR</button></div></section></main>');
     }
   }
@@ -75,7 +74,7 @@
     pinta(cab('Sala de Escape') + '<main class="pagina"><section class="hud">' + M.logo('logo-portal')
       + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Sala de Escape</p>'
       + '<p class="suave centro" style="margin-bottom:18px">Solo el Comandante de Misión (Custodio Digital) usa la Sala de Escape.</p>'
-      + '<form id="f"><label class="campo"><span>Código de acceso</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(cfg.codigo || '') + '" placeholder="El que les entregó el Guía Especialista"></label>'
+      + '<form id="f"><label class="campo"><span>Código de la Sala de Escape</span><input type="text" id="cod" class="mayus" autocomplete="off" autocapitalize="characters" value="' + M.esc(cfg.codigo || '') + '" placeholder="El que le entregó el Guía Especialista"></label>'
       + '<div class="campo"><span>Su grupo</span><div class="opciones">' + opGrupos + '</div></div>'
       + '<p class="error">' + M.esc(err || '') + '</p>'
       + '<button class="btn primario ancho grande" type="submit">ENTRAR A LA SALA DE ESCAPE →</button></form>'
@@ -84,7 +83,7 @@
     document.getElementById('f').onsubmit = ev => {
       ev.preventDefault();
       cfg.codigo = document.getElementById('cod').value.trim();
-      if (!cfg.codigo) return pAcceso('Escriban el código de acceso.');
+      if (!cfg.codigo) return pAcceso('Escriba el código de la Sala de Escape.');
       if (!cfg.grupo) return pAcceso('Elijan su grupo.');
       M.audio(); M.decir('Acceso concedido.');   // primer gesto: habilita audio y voz en el celular
       guardarCfg(); cargar();
@@ -139,7 +138,7 @@
   async function abrir(id) {
     try {
       E = await M.rpc('mdt_abrir', { p_codigo: cfg.codigo, p_grupo: cfg.grupo, p_estacion: id });
-      M.sincronizar(E.ahora); vista = { est: id, tab: 0 }; pantalla = 'estacion'; M.SFX.portal(); render();
+      M.sincronizar(E.ahora); vista = { est: id, tab: primeraPendiente(contenido(id)) }; pantalla = 'estacion'; M.SFX.portal(); render();
       const c = contenido(id);
       M.decir('Estación ' + c.numero + ': ' + c.nombre + '. ' + c.narrativa);
     } catch (e) {
@@ -163,12 +162,19 @@
       if (pantalla === 'estacion') { const y = window.scrollY; pEstacion(); window.scrollTo(0, y); }
     } catch (e) {} finally { cargandoVentajas = false; }
   }
+  /* Las pruebas van en orden: una pestaña se abre cuando la anterior está resuelta. */
+  function idsEstacion(c) { return c.pruebas.map(p => p.id).concat([c.clave.id]); }
+  function habilitada(c, i) { return idsEstacion(c).slice(0, i).every(resuelto); }
+  function primeraPendiente(c) { const ids = idsEstacion(c), i = ids.findIndex(id => !resuelto(id)); return i < 0 ? ids.length - 1 : i; }
   function puntoEstado(id) { const r = respuesta(id); return r.correcta ? 'bien' : r.intentos >= 2 ? 'mal' : ''; }
 
   function pEstacion() {
     const c = contenido(vista.est), x = est(vista.est);
-    const tabs = c.pruebas.map((p, i) => '<button class="pestana ' + (vista.tab === i ? 'sel' : '') + '" data-tab="' + i + '"><span class="estado ' + puntoEstado(p.id) + '"></span>PRUEBA ' + p.id + '</button>').join('')
-      + '<button class="pestana ' + (vista.tab === c.pruebas.length ? 'sel' : '') + '" data-tab="' + c.pruebas.length + '"><span class="estado ' + puntoEstado(c.clave.id) + '"></span>CLAVE DE SALIDA</button>';
+    if (!habilitada(c, vista.tab)) vista.tab = primeraPendiente(c);
+    const pest = (i, txt, id) => { const ok = habilitada(c, i);
+      return '<button class="pestana ' + (vista.tab === i ? 'sel' : '') + (ok ? '' : ' bloqueada') + '" ' + (ok ? 'data-tab="' + i + '"' : 'disabled title="Se abre al resolver la prueba anterior"') + '>'
+        + (ok ? '<span class="estado ' + puntoEstado(id) + '"></span>' : '<span class="candadito" aria-hidden="true">🔒</span>') + txt + '</button>'; };
+    const tabs = c.pruebas.map((p, i) => pest(i, 'PRUEBA ' + p.id, p.id)).join('') + pest(c.pruebas.length, 'CLAVE DE SALIDA', c.clave.id);
     const cuerpo = vista.tab < c.pruebas.length ? vistaPrueba(c, c.pruebas[vista.tab]) : vistaClave(c);
     const pendientes = c.pruebas.map(p => p.id).concat([c.clave.id]).filter(id => { const r = respuesta(id); return !r.correcta && r.intentos < 2; }).length;
     pinta(cab('Estación ' + c.numero, true) + '<main class="pagina">'
@@ -291,7 +297,9 @@
     if (!local[k]) { local[k] = M.ahora(); guardarLocal(); }
     return tarjetaHTML(c, p) + (p.pantalla || []).map((m, i) => materialHTML(p, m, i)).join('')
       + cajaCodigo(p.id, p.codigo) + pistasHTML(p)
-      + '<div class="acciones"><button class="btn fantasma" data-tab="' + (vista.tab + 1) + '">' + (vista.tab + 1 < c.pruebas.length ? 'SIGUIENTE PRUEBA →' : 'IR A LA CLAVE DE SALIDA →') + '</button></div>';
+      + (resuelto(p.id)
+          ? '<div class="acciones"><button class="btn primario grande" data-tab="' + (vista.tab + 1) + '">' + (vista.tab + 1 < c.pruebas.length ? 'SIGUIENTE: PRUEBA ' + c.pruebas[vista.tab + 1].id + ' →' : 'IR A LA CLAVE DE SALIDA →') + '</button></div>'
+          : '<p class="suave centro" style="font-size:13px;margin-top:14px">🔒 ' + (vista.tab + 1 < c.pruebas.length ? 'La prueba ' + c.pruebas[vista.tab + 1].id : 'La clave de salida') + ' se abre cuando registren el código de esta prueba.</p>');
   }
   function vistaClave(c) {
     return '<section class="hud tarjeta"><div class="tarjeta-cab"><span>Consola de validación</span><span>Estación ' + c.numero + '</span></div>'

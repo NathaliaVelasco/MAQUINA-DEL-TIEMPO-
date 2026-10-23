@@ -107,7 +107,7 @@
       + '<p class="sobretitulo">Misión operativa</p><ul>' + r.mision.map(x => '<li>' + M.esc(x) + '</li>').join('') + '</ul>'
       + (registro.rol === 'comandante'
           ? '<div class="acciones"><a class="btn primario grande latido" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">ENTRAR A LA SALA DE ESCAPE →</a></div>'
-            + '<p class="suave" style="margin-top:10px;font-size:13px">Usted digita los códigos del grupo. Mantenga este celular con batería y conexión.</p>'
+            + '<p class="suave" style="margin-top:10px;font-size:13px">Para entrar necesita el <b>código de la Sala de Escape</b>: se lo entrega el Guía Especialista. Usted digita los códigos del grupo; mantenga este celular con batería y conexión.</p>'
           : '<p class="suave" style="margin-top:16px;font-size:14px">El Comandante de Misión conduce el juego desde su celular.</p>')
       + '</section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'

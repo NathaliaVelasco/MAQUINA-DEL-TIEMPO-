@@ -27,7 +27,8 @@ revoke all on schema mdt from public;
 -- ---------------------------------------------------------------- tablas ----
 create table mdt.config (
   id            int primary key default 1 check (id = 1),
-  codigo_acceso text not null default 'CAMBIAR',
+  codigo_acceso text not null default 'CAMBIAR',   -- Pórtico de Entrada (registro)
+  codigo_sala   text not null default 'CAMBIAR-SALA', -- Sala de Escape (Comandante)
   pin           text not null default 'CAMBIAR',
   sesion        int  not null default 1
 );
@@ -127,6 +128,16 @@ create function mdt.norm(t text) returns text language sql immutable as $$
                'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))
 $$;
 
+create function mdt.nombre_grupo(g text) returns text language sql immutable as $$
+  select case g when 'davinci' then 'Alquimistas de Da Vinci' when 'verne' then 'Exploradores de Verne'
+                when 'wells' then 'Viajeros de Wells' when 'tesla' then 'Guardianes de Tesla' else g end
+$$;
+
+create function mdt.nombre_rol(r text) returns text language sql immutable as $$
+  select case r when 'piloto' then 'Líder Piloto de Vuelo' when 'copiloto' then 'Copiloto'
+                when 'comandante' then 'Comandante de Misión' when 'tripulante' then 'Tripulante de Élite' else r end
+$$;
+
 create function mdt.sesion() returns int language sql stable as $$
   select sesion from mdt.config where id = 1
 $$;
@@ -135,6 +146,13 @@ create function mdt.verificar_codigo(p_codigo text) returns void language plpgsq
 begin
   if mdt.norm(p_codigo) is distinct from mdt.norm((select codigo_acceso from mdt.config where id = 1)) then
     raise exception 'Código de acceso incorrecto.';
+  end if;
+end $$;
+
+create function mdt.verificar_codigo_sala(p_codigo text) returns void language plpgsql as $$
+begin
+  if mdt.norm(p_codigo) is distinct from mdt.norm((select codigo_sala from mdt.config where id = 1)) then
+    raise exception 'Código de la Sala de Escape incorrecto.';
   end if;
 end $$;
 
@@ -252,7 +270,7 @@ end $$;
 create function public.mdt_consola(p_codigo text, p_grupo text) returns json
 language plpgsql security definer set search_path = mdt, public as $$
 begin
-  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.verificar_codigo_sala(p_codigo);
   perform mdt.vencer();
   return mdt.estado_equipo(mdt.equipo_id(p_grupo));
 end $$;
@@ -262,7 +280,7 @@ create function public.mdt_abrir(p_codigo text, p_grupo text, p_estacion text) r
 language plpgsql security definer set search_path = mdt, public as $$
 declare v_eq int; v_num int; v_prev text; v_otro text;
 begin
-  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.verificar_codigo_sala(p_codigo);
   perform mdt.vencer();
   v_eq := mdt.equipo_id(p_grupo);
   select numero into v_num from mdt.estaciones where id = p_estacion;
@@ -288,7 +306,7 @@ create function public.mdt_responder(p_codigo text, p_grupo text, p_codigo_id te
 language plpgsql security definer set search_path = mdt, public as $$
 declare v_eq int; c mdt.codigos; v_estado text; r mdt.respuestas; v_ok boolean;
 begin
-  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.verificar_codigo_sala(p_codigo);
   perform mdt.vencer();
   v_eq := mdt.equipo_id(p_grupo);
   select * into c from mdt.codigos where id = p_codigo_id;
@@ -296,6 +314,13 @@ begin
   select estado into v_estado from mdt.avance where equipo = v_eq and estacion = c.estacion;
   if v_estado is distinct from 'abierta' then raise exception 'CERRADA:La estación ya está cerrada.'; end if;
   if trim(coalesce(p_valor, '')) = '' then raise exception 'Escriban el código antes de validar.'; end if;
+  -- Las pruebas de cada estación se resuelven en orden (1, 2, 3 y luego la clave).
+  if exists (select 1 from mdt.codigos c2
+              left join mdt.respuestas r2 on r2.codigo = c2.id and r2.equipo = v_eq
+             where c2.estacion = c.estacion and c2.orden < c.orden
+               and not (coalesce(r2.correcta, false) or coalesce(r2.intentos, 0) >= 2)) then
+    raise exception 'Primero resuelvan la prueba anterior.';
+  end if;
 
   insert into mdt.respuestas (equipo, codigo) values (v_eq, c.id) on conflict do nothing;
   select * into r from mdt.respuestas where equipo = v_eq and codigo = c.id for update;
@@ -318,7 +343,7 @@ create function public.mdt_finalizar(p_codigo text, p_grupo text, p_estacion tex
 language plpgsql security definer set search_path = mdt, public as $$
 declare v_eq int; a mdt.avance; e mdt.estaciones; v_seg int; v_cod int; v_tiempo int := 0; b jsonb;
 begin
-  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.verificar_codigo_sala(p_codigo);
   perform mdt.vencer();
   v_eq := mdt.equipo_id(p_grupo);
   select * into a from mdt.avance where equipo = v_eq and estacion = p_estacion for update;
@@ -366,7 +391,7 @@ create function public.mdt_ventajas(p_codigo text, p_grupo text) returns json
 language plpgsql security definer set search_path = mdt, public as $$
 declare v_eq int;
 begin
-  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.verificar_codigo_sala(p_codigo);
   v_eq := mdt.equipo_id(p_grupo);
   if not exists (select 1 from mdt.respuestas where equipo = v_eq and codigo = '5.2' and (correcta or intentos >= 2)) then
     raise exception 'Primero registren el código de la prueba 5.2.';
@@ -383,7 +408,8 @@ begin
     raise exception 'PIN incorrecto.';
   end if;
   if p_accion = 'verificar' then
-    return json_build_object('ok', true, 'codigo_acceso', (select codigo_acceso from mdt.config where id = 1), 'sesion', mdt.sesion());
+    return json_build_object('ok', true, 'codigo_acceso', (select codigo_acceso from mdt.config where id = 1),
+                             'codigo_sala', (select codigo_sala from mdt.config where id = 1), 'sesion', mdt.sesion());
   elsif p_accion = 'nueva_sesion' then
     insert into mdt.sesiones default values returning id into v_id;
     update mdt.config set sesion = v_id where id = 1;
@@ -396,6 +422,7 @@ begin
     perform mdt.vencer();
     return json_build_object('ahora', now(), 'sesion', mdt.sesion(),
       'codigo_acceso', (select codigo_acceso from mdt.config where id = 1),
+      'codigo_sala', (select codigo_sala from mdt.config where id = 1),
       'grupos', (select json_agg(json_build_object(
         'grupo', g.grupo,
         'registrado', e.id is not null,
@@ -411,7 +438,13 @@ begin
         left join mdt.equipos e on e.grupo = g.grupo and e.sesion = mdt.sesion()));
   elsif p_accion = 'cambiar_codigo' then
     if length(trim(coalesce(p_dato, ''))) < 4 then raise exception 'El código debe tener al menos 4 caracteres.'; end if;
+    if mdt.norm(p_dato) = mdt.norm((select codigo_sala from mdt.config where id = 1)) then raise exception 'El código de registro debe ser distinto al de la Sala de Escape.'; end if;
     update mdt.config set codigo_acceso = upper(trim(p_dato)) where id = 1;
+    return json_build_object('ok', true);
+  elsif p_accion = 'cambiar_codigo_sala' then
+    if length(trim(coalesce(p_dato, ''))) < 4 then raise exception 'El código debe tener al menos 4 caracteres.'; end if;
+    if mdt.norm(p_dato) = mdt.norm((select codigo_acceso from mdt.config where id = 1)) then raise exception 'El código de la Sala de Escape debe ser distinto al de registro.'; end if;
+    update mdt.config set codigo_sala = upper(trim(p_dato)) where id = 1;
     return json_build_object('ok', true);
   elsif p_accion = 'reabrir_grupo' then
     delete from mdt.avance where equipo = (select id from mdt.equipos where sesion = mdt.sesion() and grupo = p_dato);
@@ -426,15 +459,34 @@ begin
         'codigo', c.id, 'estacion', c.estacion, 'puntos', c.puntos, 'respuesta', c.mostrar) order by c.estacion, c.orden)
       from mdt.codigos c), '[]'::json));
   elsif p_accion = 'exportar' then
-    return json_build_object('filas', coalesce((select json_agg(json_build_object(
-        'sesion', e.sesion, 'grupo', e.grupo, 'nombre', t.nombre, 'profesion', t.profesion, 'rol', t.rol,
-        'autoriza_datos', t.autoriza, 'registro', t.creado,
-        'puntaje_grupo', (select coalesce(sum(total), 0) from mdt.avance where equipo = e.id)) order by e.grupo, t.creado)
-      from mdt.tripulantes t join mdt.equipos e on e.id = t.equipo where e.sesion = mdt.sesion()), '[]'::json),
-      'estaciones', coalesce((select json_agg(json_build_object(
-        'grupo', e.grupo, 'estacion', a.estacion, 'estado', a.estado, 'segundos', a.seg_usados,
-        'puntos_codigos', a.pts_codigos, 'puntos_tiempo', a.pts_tiempo, 'total', a.total) order by e.grupo, a.estacion)
-      from mdt.avance a join mdt.equipos e on e.id = a.equipo where e.sesion = mdt.sesion()), '[]'::json));
+    -- p_dato = 'historico' → todas las sesiones; si no, solo la sesión actual.
+    return json_build_object(
+      'puntajes', coalesce((select json_agg(x order by x."Sesión", x."Puntos totales" desc) from (
+        select s.id as "Sesión", to_char(coalesce((select max(coalesce(a.fin, a.inicio)) from mdt.avance a where a.equipo = e.id), s.creada) at time zone 'America/Bogota', 'YYYY-MM-DD HH24:MI') as "Fecha",
+               mdt.nombre_grupo(e.grupo) as "Grupo",
+               (select count(*) from mdt.tripulantes t where t.equipo = e.id) as "N.º integrantes",
+               coalesce((select string_agg(t.nombre || ' (' || mdt.nombre_rol(t.rol) || ')', ', ' order by t.creado) from mdt.tripulantes t where t.equipo = e.id), '') as "Integrantes",
+               coalesce((select total from mdt.avance where equipo = e.id and estacion = 'E1'), 0) as "E1",
+               coalesce((select total from mdt.avance where equipo = e.id and estacion = 'E2'), 0) as "E2",
+               coalesce((select total from mdt.avance where equipo = e.id and estacion = 'E3'), 0) as "E3",
+               coalesce((select total from mdt.avance where equipo = e.id and estacion = 'E4'), 0) as "E4",
+               coalesce((select total from mdt.avance where equipo = e.id and estacion = 'E5'), 0) as "E5",
+               coalesce((select sum(total) from mdt.avance where equipo = e.id), 0) as "Puntos totales",
+               (select count(*) from mdt.avance where equipo = e.id and estado in ('cerrada', 'agotada')) as "Estaciones completadas"
+          from mdt.equipos e join mdt.sesiones s on s.id = e.sesion
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json),
+      'participantes', coalesce((select json_agg(x order by x."Sesión", x."Grupo") from (
+        select e.sesion as "Sesión", to_char(t.creado at time zone 'America/Bogota', 'YYYY-MM-DD HH24:MI') as "Fecha de registro",
+               mdt.nombre_grupo(e.grupo) as "Grupo", t.nombre as "Nombre", t.profesion as "Profesión", mdt.nombre_rol(t.rol) as "Rol",
+               case when t.autoriza then 'SÍ' else 'NO' end as "Autoriza datos"
+          from mdt.tripulantes t join mdt.equipos e on e.id = t.equipo
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json),
+      'estaciones', coalesce((select json_agg(x order by x."Sesión", x."Grupo", x."Estación") from (
+        select e.sesion as "Sesión", mdt.nombre_grupo(e.grupo) as "Grupo", a.estacion as "Estación",
+               case a.estado when 'cerrada' then 'Completada' when 'agotada' then 'Cerrada por tiempo' else 'En juego' end as "Estado",
+               a.seg_usados as "Segundos", a.pts_codigos as "Puntos respuestas", a.pts_tiempo as "Puntos agilidad", a.total as "Total"
+          from mdt.avance a join mdt.equipos e on e.id = a.equipo
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json));
   end if;
   raise exception 'Acción no válida.';
 end $$;

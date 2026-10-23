@@ -413,3 +413,10 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .rol-demo small { color: var(--gris); font-style: italic; }
 .rol-demo ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 @media (max-width: 820px) { .demo-grid { grid-template-columns: 1fr; } .marco-celular { height: 640px; } }
+
+.claves-admin { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.clave-caja { padding: 14px; border: 1px solid var(--linea); border-radius: 12px; background: rgba(0, 0, 0, .5); }
+.clave-caja > small { font: 700 11px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--gris); }
+.clave-caja .clave-grande { font-size: clamp(24px, 5vw, 40px); }
+.pestana.bloqueada { opacity: .45; cursor: not-allowed; }
+.pestana .candadito { font-size: 11px; margin-right: 6px; }
