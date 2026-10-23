@@ -296,33 +296,48 @@
   }, { passive: true });
 
   /* ------------------------------------------------------------ voz */
+  // 1) Locución grabada (voz masculina de ElevenLabs): audio/voz/postal-N-frente.mp3 y -reverso.mp3
+  // 2) Respaldo: voz del dispositivo, eligiendo siempre una masculina en español si existe.
   const voz = window.speechSynthesis;
+  const MASCULINAS = /(jorge|juan|diego|carlos|pablo|ra[uú]l|gerardo|enrique|andr[eé]s|alonso|jos[eé]|miguel|antonio|[aá]lvaro|dar[ií]o|tom[aá]s|federico|lucas|mateo|alberto|eddy|reed|rocko|grandpa|male|hombre|masculin)/i;
+  const FEMENINAS = /(paulina|m[oó]nica|helena|laura|sabina|paloma|elvira|dalia|camila|salom[eé]|female|mujer|femenin|marisol|lupe|isabela|ximena|elena|luc[ií]a|sof[ií]a|catalina|valentina|francisca)/i;
+  let locucion = null;
   function elegirVoz() {
     if (!voz) return null;
     const vs = voz.getVoices().filter(v => /^es/i.test(v.lang));
-    return vs.find(v => /(es-(CO|MX|US|419))/i.test(v.lang)) || vs[0] || null;
+    const puntos = v => (MASCULINAS.test(v.name) ? 100 : 0) - (FEMENINAS.test(v.name) ? 100 : 0) + (/es-(CO|MX|US|419)/i.test(v.lang) ? 10 : 0) + (v.localService ? 0 : 2);
+    return vs.sort((a, b2) => puntos(b2) - puntos(a))[0] || null;
+  }
+  function marcarBoton(sonando) {
+    $voz.innerHTML = sonando ? '■<span class="txt-largo"> Detener</span>' : '▶<span class="txt-largo"> Escuchar</span>';
+    $voz.setAttribute('aria-pressed', sonando ? 'true' : 'false');
   }
   function callar() {
+    if (locucion) { locucion.pause(); locucion = null; }
     if (voz) voz.cancel();
     S.bajar(false);
-    $voz.innerHTML = '▶<span class="txt-largo"> Escuchar</span>'; $voz.setAttribute('aria-pressed', 'false');
+    marcarBoton(false);
+  }
+  function hablarDispositivo(p) {
+    if (!voz) { marcarBoton(false); S.bajar(false); return; }
+    const txt = cara === 'frente' ? [p.titulo + '.', p.subtitulo + '.'].concat(p.texto).join(' ') : 'Mensaje clave. ' + p.clave;
+    const u = new SpeechSynthesisUtterance(txt.replace(/™/g, ''));
+    u.lang = 'es-CO'; u.rate = 1.02;
+    const v = elegirVoz(); if (v) { u.voice = v; u.lang = v.lang; }
+    u.pitch = v && MASCULINAS.test(v.name) ? 0.95 : 0.7;   // sin voz masculina en el equipo: tono más grave
+    u.onend = u.onerror = () => { S.bajar(false); marcarBoton(false); };
+    voz.speak(u);
   }
   function alternarVoz() {
-    if (!voz) return;
-    if (voz.speaking) { callar(); return; }
+    if (locucion || (voz && voz.speaking)) { callar(); return; }
     const p = POSTALES[indice - 1]; if (!p) return;
-    const txt = cara === 'frente'
-      ? [p.titulo + '.', p.subtitulo + '.'].concat(p.texto).join(' ')
-      : 'Mensaje clave. ' + p.clave;
-    const u = new SpeechSynthesisUtterance(txt.replace(/™/g, ''));
-    u.lang = 'es-CO'; u.rate = 1.05;
-    const v = elegirVoz(); if (v) { u.voice = v; u.lang = v.lang; }
-    u.onend = u.onerror = () => { S.bajar(false); $voz.innerHTML = '▶<span class="txt-largo"> Escuchar</span>'; $voz.setAttribute('aria-pressed', 'false'); };
-    S.bajar(true);
-    voz.speak(u);
-    $voz.innerHTML = '■<span class="txt-largo"> Detener</span>'; $voz.setAttribute('aria-pressed', 'true');
+    S.bajar(true); marcarBoton(true);
+    const a = new Audio('audio/voz/postal-' + indice + '-' + cara + '.mp3');
+    locucion = a;
+    a.onended = () => { if (locucion === a) { locucion = null; S.bajar(false); marcarBoton(false); } };
+    a.play().catch(() => { if (locucion === a) { locucion = null; hablarDispositivo(p); } });
   }
-  if (!voz) $voz.remove();
+  if (voz) { voz.getVoices(); voz.onvoiceschanged = () => {}; }
 
   /* ------------------------------------------------------------ inicio */
   function desdeHash() {
