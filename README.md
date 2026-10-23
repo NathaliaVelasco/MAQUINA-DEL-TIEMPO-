@@ -13,6 +13,7 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Pórtico de Entrada | `entrada.html` + `js/entrada.js` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
 | Sala de Escape | `sala.html` + `js/sala.js` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
 | El Gran Tablero | `tablero.html` + `js/tablero.js` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
+| Cierre de Ruta | `cierre-de-ruta.html` + `js/cierre-de-ruta.js` + `css/cierre-de-ruta.css` | Cualquier participante, al terminar: el juego de 5 postales en digital (frente con texto e ilustración, reverso con mensaje clave y referencias). Se puede abrir en una postal concreta con `#postal-1` … `#postal-5` |
 | Guía Especialista | `guia.html` + `js/guia.js` | Administrador del juego (con PIN): genera los dos códigos (registro y Sala de Escape), QR con su código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, Excel con histórico y cambio de PIN |
 
 ## Reglas implementadas (las controla el servidor)
