@@ -13,7 +13,7 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Pórtico de Entrada | `entrada.html` + `js/entrada.js` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
 | Sala de Escape | `sala.html` + `js/sala.js` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
 | El Gran Tablero | `tablero.html` + `js/tablero.js` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
-| Guía Especialista | `guia.html` + `js/guia.js` | Administrador del juego (con PIN): genera el código de acceso, QR con el código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, descarga CSV y cambio de PIN |
+| Guía Especialista | `guia.html` + `js/guia.js` | Administrador del juego (con PIN): genera los dos códigos (registro y Sala de Escape), QR con su código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, Excel con histórico y cambio de PIN |
 
 ## Reglas implementadas (las controla el servidor)
 
@@ -37,8 +37,8 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 1. `servidor/1_instalar.sql` crea la estructura y las reglas desde cero (borra todo).
 2. `2_respuestas_PRIVADO.sql` carga respuestas, los dos códigos y el PIN (no se publica; lo tiene Simoné).
 3. `servidor/actualizar_base_ya_instalada.sql` actualiza una base ya instalada sin borrar datos (códigos separados, pruebas en orden, Excel con histórico).
-4. Excel desde el panel del Guía Especialista: pestañas Puntajes (sesión, fecha, grupo, integrantes, puntos por estación y totales), Participantes y Estaciones; de la sesión actual o histórico.
-3. La URL y la clave pública del proyecto van en `js/config.js`.
+5. Excel desde el panel del Guía Especialista: pestañas Puntajes (sesión, fecha, grupo, integrantes, puntos por estación y totales), Participantes y Estaciones; de la sesión actual o histórico.
+4. La URL y la clave pública del proyecto van en `js/config.js`.
 
 ## Contenido
 
