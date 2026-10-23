@@ -12,7 +12,7 @@
   'use strict';
   const ARCHIVO_AMBIENTE = 'audio/cierre-ambiente.mp3';
   const ARCHIVO_GIRO = 'audio/cierre-giro.mp3';
-  const VOL_AMBIENTE = 0.22, VOL_GIRO = 0.35;
+  const VOL_AMBIENTE = 0.2, VOL_GIRO = 0.3;
 
   let ctx = null, maestro = null, activo = false, sinte = null, campanas = null;
   let audioAmb = null, usaArchivo = null, bajado = false;
@@ -30,25 +30,34 @@
     return ctx;
   }
 
-  /* ------------------------------------------- ambiente desde archivo */
-  function probarArchivo() {
-    return new Promise(resolve => {
-      if (usaArchivo !== null) return resolve(usaArchivo);
-      const a = new Audio(); a.loop = true; a.preload = 'auto'; a.volume = 0;
-      let listo = false;
-      a.addEventListener('canplaythrough', () => { if (!listo) { listo = true; audioAmb = a; usaArchivo = true; resolve(true); } }, { once: true });
-      a.addEventListener('error', () => { if (!listo) { listo = true; usaArchivo = false; resolve(false); } }, { once: true });
-      setTimeout(() => { if (!listo) { listo = true; usaArchivo = false; resolve(false); } }, 4000);
-      a.src = ARCHIVO_AMBIENTE;
-    });
+  /* ------------------------------------------- ambiente desde archivo (bucle sin cortes) */
+  let bufAmb = null, fuenteAmb = null, gananciaAmb = null;
+  async function probarArchivo() {
+    if (usaArchivo !== null) return usaArchivo;
+    const c = contexto();
+    try {
+      if (!c) throw new Error('sin audio');
+      const r = await fetch(ARCHIVO_AMBIENTE);
+      if (!r.ok) throw new Error('sin archivo');
+      const datos = await r.arrayBuffer();
+      bufAmb = await new Promise((ok, mal) => c.decodeAudioData(datos, ok, mal));
+      usaArchivo = true;
+    } catch (e) { usaArchivo = false; }
+    return usaArchivo;
   }
-  function fundir(audio, hasta, ms) {
-    const desde = audio.volume, t0 = performance.now();
-    (function paso(t) {
-      const k = Math.min(1, (t - t0) / ms);
-      audio.volume = Math.max(0, Math.min(1, desde + (hasta - desde) * k));
-      if (k < 1) requestAnimationFrame(paso); else if (hasta === 0) audio.pause();
-    })(t0);
+  function sonarArchivo() {
+    const c = contexto(); if (!c || !bufAmb || fuenteAmb) return;
+    gananciaAmb = c.createGain(); gananciaAmb.gain.value = 0;
+    gananciaAmb.connect(maestro);
+    fuenteAmb = c.createBufferSource(); fuenteAmb.buffer = bufAmb; fuenteAmb.loop = true;
+    fuenteAmb.connect(gananciaAmb); fuenteAmb.start();
+    gananciaAmb.gain.setTargetAtTime(VOL_AMBIENTE, c.currentTime, 0.6);
+  }
+  function callarArchivo() {
+    if (!fuenteAmb || !ctx) return;
+    const f = fuenteAmb, g = gananciaAmb; fuenteAmb = null; gananciaAmb = null;
+    g.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+    setTimeout(() => { try { f.stop(); } catch (e) {} }, 900);
   }
 
   /* ------------------------------------------- ambiente sintetizado */
@@ -127,19 +136,18 @@
     if (c) maestro.gain.setTargetAtTime(1, c.currentTime, 0.4);
     const hayArchivo = await probarArchivo();
     if (!activo) return;
-    if (hayArchivo) { audioAmb.volume = 0; audioAmb.play().then(() => fundir(audioAmb, bajado ? VOL_AMBIENTE * 0.3 : VOL_AMBIENTE, 1500)).catch(() => {}); }
+    if (hayArchivo) sonarArchivo();
     else iniciarSinte();
   }
   function apagar() {
     activo = false; guardar(false); actualizarBoton();
-    if (audioAmb) fundir(audioAmb, 0, 600);
+    callarArchivo();
     if (ctx) maestro.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
   }
   function alternar() { activo ? apagar() : encender(); }
   // baja el ambiente mientras habla la voz
   function bajar(si) {
     bajado = si;
-    if (audioAmb && activo) fundir(audioAmb, si ? VOL_AMBIENTE * 0.3 : VOL_AMBIENTE, 400);
     if (ctx && activo) maestro.gain.setTargetAtTime(si ? 0.3 : 1, ctx.currentTime, 0.2);
   }
 
@@ -155,8 +163,8 @@
 
   document.addEventListener('visibilitychange', () => {
     if (!activo) return;
-    if (document.hidden) { if (audioAmb) audioAmb.pause(); if (ctx) ctx.suspend(); }
-    else { if (audioAmb) audioAmb.play().catch(() => {}); if (ctx) ctx.resume(); }
+    if (document.hidden) { if (ctx) ctx.suspend(); }
+    else { if (ctx) ctx.resume(); }
   });
 
   window.SONIDO_RUTA = { enlazar: enlazar, encender: encender, apagar: apagar, giro: giro, bajar: bajar, preferido: leer, get activo() { return activo; } };
