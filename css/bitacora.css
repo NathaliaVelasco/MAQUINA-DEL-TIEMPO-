@@ -72,6 +72,7 @@ body.bt-cuerpo::before, body.bt-cuerpo::after { display: none; }
 /* ---------- fase ---------- */
 .bt-fase-cab { margin: 6px 0 18px; }
 .bt-fase-etq { display: flex; align-items: center; gap: 10px; font: 700 11px var(--display); letter-spacing: .2em; color: var(--malachite); text-transform: uppercase; }
+.bt-oir { margin-left: auto; letter-spacing: .08em; }
 .bt-radar { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--malachite); position: relative; box-shadow: 0 0 10px rgba(5, 221, 77, .4); }
 .bt-radar::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--malachite); animation: latido 1.8s infinite; }
 .bt-fase-cab h2 { font-size: clamp(20px, 5vw, 30px); font-weight: 900; text-transform: uppercase; margin: 8px 0 10px; }
@@ -161,7 +162,7 @@ body.bt-cuerpo::before, body.bt-cuerpo::after { display: none; }
 @media print {
   @page { margin: 12mm; }
   html, body.bt-cuerpo { background: #fff !important; color: #111 !important; }
-  .fondo-dinamico, .bt-cab, .bt-pestanas, .bt-punto-pie, .bt-msg, .bt-fin-fase, .bt-saltos, .abdomen { display: none !important; }
+  .fondo-dinamico, .bt-cab, .bt-pestanas, .bt-oir, .bt-punto-pie, .bt-msg, .bt-fin-fase, .bt-saltos, .abdomen { display: none !important; }
   .bt-escena { width: 100%; padding: 0; }
   .bt-imprimir { display: block; border-bottom: 2px solid #0a7a33; padding-bottom: 8px; margin-bottom: 14px; }
   .bt-imprimir b { display: block; font: 700 14px var(--display); color: #0a7a33; }

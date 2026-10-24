@@ -158,7 +158,7 @@
     const i = B.fases.indexOf(f), sig = B.fases[i + 1];
     return '<section class="bt-fase">'
       + '<div class="bt-panel bt-fase-cab">'
-      + '<p class="bt-fase-etq"><span class="bt-radar"></span>Fase ' + f.id + '</p>'
+      + '<p class="bt-fase-etq"><span class="bt-radar"></span>Fase ' + f.id + '<button class="btn contorno pequeno bt-oir" type="button" data-oir="' + f.id + '">▶ Escuchar fase</button></p>'
       + '<h2>' + esc(f.nombre) + '</h2>'
       + '<p class="bt-objetivo"><b>Objetivo:</b> ' + esc(f.objetivo) + '</p>'
       + '<div class="bt-saltos">' + f.puntos.map(p => '<a href="#punto-' + p.n + '" class="' + (resueltoPunto(p.n) ? 'hecho' : '') + '">' + p.n + '</a>').join('') + '</div>'
@@ -188,7 +188,6 @@
       + '</aside></div>'
       + '<div class="bt-acciones"><span class="bt-alerta" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6l20 36H4z"/><path d="M24 19v11M24 35v1"/></svg></span><div><b>Acciones clave</b><p>' + conCasillas(t.acciones) + '</p></div></div>'
       + '<footer class="bt-punto-pie"><span class="bt-estado">' + (completo ? '✓ Registro completo' : hechas + '/' + cs.length + ' casillas') + '</span>'
-      + '<button class="btn contorno pequeno" type="button" data-escuchar="' + p.n + '">▶ Escuchar</button>'
       + (completo ? '' : '<button class="btn primario pequeno" type="button" data-verificar="' + p.n + '">Verificar</button>')
       + '</footer><p class="bt-msg" id="msg-' + p.n + '" aria-live="polite"></p>'
       + '</article>';
@@ -228,10 +227,11 @@
     if (E.vista === 'portada' && !S.activo) { let pref = null; try { pref = localStorage.getItem('mdt-cdr-sonido'); } catch (e) {} if (pref !== '0') S.encender(); }
     S.giro();
     E.vista = v; guardar();
-    if (reducido) { pintar(); return; }
+    if (reducido) { pintar(); anunciar(v); return; }
     $escena.classList.add('sale');
-    setTimeout(() => { pintar(); $escena.classList.remove('sale'); $escena.classList.add('entra'); setTimeout(() => $escena.classList.remove('entra'), 360); }, 180);
+    setTimeout(() => { pintar(); $escena.classList.remove('sale'); $escena.classList.add('entra'); setTimeout(() => $escena.classList.remove('entra'), 360); anunciar(v); }, 180);
   }
+  function anunciar(v) { if (S.activo && B.fases.some(f => f.id === v)) setTimeout(() => decirFase(v), 450); }
 
   /* ---------------------------------------------------------- verificación */
   function verificar(n) {
@@ -284,49 +284,31 @@
   }
 
   /* ---------------------------------------------------------------- voz */
-  // 1) Locución grabada: audio/bitacora/punto-N.mp3  2) Respaldo: voz masculina del dispositivo
-  const voz = window.speechSynthesis;
-  const MASC = /(jorge|juan|diego|carlos|pablo|ra[uú]l|gerardo|enrique|andr[eé]s|alonso|jos[eé]|miguel|antonio|[aá]lvaro|dar[ií]o|tom[aá]s|federico|lucas|mateo|alberto|male|hombre|masculin)/i;
-  const FEM = /(paulina|m[oó]nica|helena|laura|sabina|paloma|elvira|dalia|camila|salom[eé]|female|mujer|femenin|marisol|lupe|isabela|ximena|elena|luc[ií]a|sof[ií]a|catalina|valentina|francisca)/i;
+  // Voz (Edoardo, ElevenLabs) solo en el cambio de fase: audio/bitacora/fase-I.mp3 … fase-IV.mp3
   let locucion = null, botonVoz = null;
   function callar() {
     if (locucion) { locucion.pause(); locucion = null; }
-    if (voz) voz.cancel();
     S.bajar(false);
-    if (botonVoz) { botonVoz.textContent = '▶ Escuchar'; botonVoz = null; }
+    if (botonVoz) { botonVoz.textContent = '▶ Escuchar fase'; botonVoz = null; }
   }
-  function textoPunto(p) {
-    const limpio = s => String(s).replace(/\[\[([^\]|]*)[^\]]*\]\]/g, (m, a) => a || 'espacio en blanco').replace(/™/g, '');
-    return [p.n + '. ' + limpio(p.titulo) + '.'].concat((p.descripcion || []).map(limpio), (p.lista || []).map(limpio), p.descripcion2 ? [limpio(p.descripcion2)] : [],
-      p.conceptos.map(c => limpio(c.t) + '. ' + limpio(c.d)), p.clave ? [limpio(p.clave)] : [], ['Acciones clave. ' + limpio(p.acciones)]).join(' ');
-  }
-  function escuchar(n, boton) {
-    if (botonVoz === boton) { callar(); return; }
+  function decirFase(id, boton) {
+    if (boton && botonVoz === boton) { callar(); return; }
     callar();
-    const p = B.fases.reduce((a, f) => a || f.puntos.find(x => x.n === n), null);
-    botonVoz = boton; boton.textContent = '■ Detener'; S.bajar(true);
-    const a = new Audio('audio/bitacora/punto-' + n + '.mp3'); locucion = a;
+    const b = boton || document.querySelector('[data-oir="' + id + '"]');
+    const a = new Audio('audio/bitacora/fase-' + id + '.mp3'); locucion = a;
     a.onended = () => { if (locucion === a) callar(); };
-    a.play().catch(() => {
-      if (locucion !== a) return; locucion = null;
-      if (!voz) { callar(); return; }
-      const u = new SpeechSynthesisUtterance(textoPunto(p)); u.lang = 'es-CO'; u.rate = 1.02;
-      const vs = voz.getVoices().filter(v => /^es/i.test(v.lang));
-      const pts = v => (MASC.test(v.name) ? 100 : 0) - (FEM.test(v.name) ? 100 : 0) + (/es-(CO|MX|US|419)/i.test(v.lang) ? 10 : 0);
-      const v = vs.sort((x, y) => pts(y) - pts(x))[0];
-      if (v) { u.voice = v; u.lang = v.lang; }
-      u.pitch = v && MASC.test(v.name) ? 0.95 : 0.7;
-      u.onend = u.onerror = () => callar();
-      voz.speak(u);
-    });
+    a.play().then(() => {
+      if (locucion !== a) return;
+      S.bajar(true);
+      if (b) { botonVoz = b; b.textContent = '■ Detener'; }
+    }).catch(() => { if (locucion === a) locucion = null; });
   }
-  if (voz) voz.getVoices();
 
   /* -------------------------------------------------------------- eventos */
   document.addEventListener('click', e => {
     const v = e.target.closest('[data-vista]'); if (v) { ir(v.getAttribute('data-vista')); return; }
     const ver = e.target.closest('[data-verificar]'); if (ver) { verificar(+ver.getAttribute('data-verificar')); return; }
-    const es = e.target.closest('[data-escuchar]'); if (es) { escuchar(+es.getAttribute('data-escuchar'), es); return; }
+    const oir = e.target.closest('[data-oir]'); if (oir) { decirFase(oir.getAttribute('data-oir'), oir); return; }
     const salto = e.target.closest('.bt-saltos a');
     if (salto) { e.preventDefault(); const d = document.querySelector(salto.getAttribute('href')); if (d) d.scrollIntoView({ behavior: reducido ? 'auto' : 'smooth', block: 'start' }); return; }
     if (e.target.id === 'descargar') { window.print(); return; }
