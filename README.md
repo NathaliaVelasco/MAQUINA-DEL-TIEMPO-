@@ -9,8 +9,8 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Pantalla | Archivo | Quién la usa |
 |---|---|---|
 | Inicio | `index.html` | Acceso a todo |
-| Demo del ecosistema | `demo.html` | Recorrido guiado para presentar: los 7 momentos, las 4 pantallas funcionando en vivo y los roles |
-| Pórtico de Entrada | `entrada.html` + `js/entrada.js` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos |
+| Demo del ecosistema | `demo.html` | Recorrido guiado para presentar: la ruta completa (Bitácora → juego → diagnóstico → Cierre de Ruta), las 6 pantallas en vivo, el diagnóstico y los roles. En la esquina, una nota con las claves de la sesión (se abre con el PIN del Guía) |
+| Pórtico de Entrada | `entrada.html` + `js/entrada.js` + `js/diagnostico-contenido.js` | Cada participante en su celular: grupo, nombre, profesión, rol y autorización de datos; diagnóstico inicial; credencial; diagnóstico final con su avance y el porqué de cada pregunta |
 | Sala de Escape | `sala.html` + `js/sala.js` | Solo el Comandante de Misión: bienvenida, Estaciones 1 a 5, códigos y retroalimentación |
 | El Gran Tablero | `tablero.html` + `js/tablero.js` | Pantalla grande: resultados de los 4 grupos en vivo y QR de ingreso |
 | Bitácora de Tránsito Temporal | `bitacora.html` + `js/bitacora.js` + `js/bitacora-contenido.js` + `css/bitacora.css` + `js/fondo-espacio.js` | Cada participante, 3 días antes del juego: 4 fases (pestañas) y 20 puntos del consenso internacional, con 44 casillas para completar que se verifican (2 intentos por casilla, avance guardado en el dispositivo) y descarga de la bitácora completada. Voz de Edoardo (ElevenLabs) solo en el cambio de fase: `audio/bitacora/fase-I.mp3` … `fase-IV.mp3` |
@@ -18,6 +18,8 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 | Guía Especialista | `guia.html` + `js/guia.js` | Administrador del juego (con PIN): genera los dos códigos (registro y Sala de Escape), QR con su código, grupos en vivo con su tripulación, reiniciar o borrar un grupo, nueva sesión, Excel con histórico y cambio de PIN |
 
 ## Reglas implementadas (las controla el servidor)
+
+- **Diagnóstico antes y después** (individual, no suma puntos): 10 preguntas antes de la Estación 1 y 10 al cerrar la 5, con escala de certeza, rutina de pensamiento e imagen + palabra. Opciones mezcladas, sin volver atrás; el servidor califica y las respuestas correctas solo llegan al celular al terminar el diagnóstico final. La Estación 1 se abre cuando toda la tripulación terminó el inicial (o el Guía libera la Sala); El Gran Tablero revela al ganador cuando todos envían el final (o el Guía lo revela). Contenido: hoja MDT_Hoja_de_contenido.xlsx, pestañas DIAGNÓSTICO y DIAGNÓSTICO · TEXTOS.
 
 - 4 grupos × 7: 1 Líder Piloto, 1 Copiloto, 1 Comandante de Misión y 4 Tripulantes de Élite.
 - Dos códigos distintos: uno de **registro** (Pórtico de Entrada, todos) y otro de la **Sala de Escape** (solo Comandantes). Los genera el Guía Especialista.
@@ -38,15 +40,22 @@ Escape room médica **híbrida** sobre manejo de abdomen abierto. El material f�
 
 1. `servidor/1_instalar.sql` crea la estructura y las reglas desde cero (borra todo).
 2. `2_respuestas_PRIVADO.sql` carga respuestas, los dos códigos y el PIN (no se publica; lo tiene Simoné).
-3. `servidor/actualizar_base_ya_instalada.sql` actualiza una base ya instalada sin borrar datos (códigos separados, pruebas en orden, Excel con histórico).
-5. Excel desde el panel del Guía Especialista: pestañas Puntajes (sesión, fecha, grupo, integrantes, puntos por estación y totales), Participantes y Estaciones; de la sesión actual o histórico.
-4. La URL y la clave pública del proyecto van en `js/config.js`.
+3. `servidor/actualizar_base_ya_instalada.sql` actualiza una base ya instalada sin borrar datos (diagnóstico antes y después, Liberar Sala, Revelar ganador y 3 pestañas nuevas del Excel). Las respuestas del diagnóstico van en el archivo privado.
+4. Excel desde el panel del Guía Especialista: pestañas Puntajes (sesión, fecha, grupo, integrantes, puntos por estación y totales), Participantes, Estaciones, Diagnóstico, Reflexiones y Resumen diagnóstico; de la sesión actual o histórico.
+5. La URL y la clave pública del proyecto van en `js/config.js`.
 
 ## Contenido
 
 Todos los textos (tarjetas, pantallas, retroalimentación) están en `js/contenido.js`.
 
+## Publicación
+
+El sitio que se comparte es **www.experienciasimone.com/maquina-del-tiempo/**: una copia de este repositorio dentro del repositorio de la página de Simoné (`nathaliavelasco.github.io`, carpeta `maquina-del-tiempo`). Su portada (`index.html`) es propia: solo lleva a la Bitácora y al Cierre de Ruta. Cada cambio se hace aquí y se vuelve a copiar.
+
 ## Pendientes de contenido (revisión con el cliente)
+
+- Diagnóstico: validación clínica de las 20 preguntas por los cirujanos de Solventum. La A7 (intervalo de 72 h) revela la clave de la prueba 4.2.
+- Diagnóstico: el mensaje al terminar el inicial ("Diagnóstico inicial completo…") es una propuesta; no está en la hoja de contenido.
 
 - Clave de la Estación 3: el documento dice "125-8 (o 120)"; la resta da **117**, que es la programada.
 - Estación 5: el documento deja "1257 o 125" y "6 o 5"; están programados **1257** y **6**.

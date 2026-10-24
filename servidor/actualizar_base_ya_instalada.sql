@@ -1,80 +1,103 @@
 -- ============================================================================
--- MÁQUINA DEL TIEMPO · ACTUALIZACIÓN (no borra datos)
+-- MÁQUINA DEL TIEMPO · ACTUALIZACIÓN: DIAGNÓSTICO ANTES Y DESPUÉS (no borra datos)
 -- Se ejecuta UNA vez en Supabase → SQL Editor, sobre una base ya instalada.
--- Agrega: código propio para la Sala de Escape, pruebas en secuencia y
--- exportación a Excel con histórico de todas las sesiones.
--- Conserva participantes, puntajes, sesiones, respuestas, código y PIN.
+-- Agrega: diagnóstico individual antes de la Estación 1 y después de la 5,
+-- "Liberar Sala" y "Revelar ganador" para el Guía Especialista, y 3 pestañas
+-- nuevas en el Excel. Conserva participantes, puntajes, sesiones, códigos y PIN.
+-- Las respuestas del diagnóstico se cargan aparte (archivo privado).
 -- ============================================================================
 
-alter table mdt.config add column if not exists codigo_sala text not null default 'CAMBIAR-SALA';
+alter table mdt.equipos  add column if not exists sala_liberada boolean not null default false;
+alter table mdt.sesiones add column if not exists revelado boolean not null default false;
 
--- >>> Código para entrar a la Sala de Escape (distinto al de registro). Puede cambiarlo aquí o desde el panel del Guía Especialista.
-update mdt.config set codigo_sala = 'SALA-2026' where id = 1 and codigo_sala = 'CAMBIAR-SALA';
+-- Diagnóstico antes y después (individual, en el celular de cada tripulante).
+-- La opción correcta y el "por qué" se cargan con el archivo privado.
+create table if not exists mdt.diag_claves (
+  pregunta text primary key,                 -- 'A1'…'A10' (antes), 'B1'…'B10' (después)
+  momento  text not null check (momento in ('antes', 'despues')),
+  correcta int  not null check (correcta between 0 and 3),
+  porque   text not null default ''
+);
 
--- ------------------------------------------------------------- utilidades ----
-create or replace function mdt.norm(t text) returns text language sql immutable as $$
-  select upper(translate(regexp_replace(coalesce(t, ''), '\s', '', 'g'),
-               'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))
+create table if not exists mdt.diag_respuestas (
+  tripulante int  not null references mdt.tripulantes(id) on delete cascade,
+  pregunta   text not null references mdt.diag_claves(pregunta) on delete cascade,
+  opcion     int  not null,
+  correcta   boolean not null,
+  certeza    text not null,
+  segundos   int,
+  creado     timestamptz not null default now(),
+  primary key (tripulante, pregunta)
+);
+
+create table if not exists mdt.diag_cierres (            -- rutina de pensamiento, imagen y palabra
+  tripulante int  not null references mdt.tripulantes(id) on delete cascade,
+  momento    text not null check (momento in ('antes', 'despues')),
+  rutina     text[] not null default '{}',
+  imagen     text,
+  palabra    text,
+  terminado  timestamptz not null default now(),
+  primary key (tripulante, momento)
+);
+
+create or replace function mdt.diag_activo() returns boolean language sql stable as $$
+  select exists (select 1 from mdt.diag_claves)
 $$;
 
-create or replace function mdt.nombre_grupo(g text) returns text language sql immutable as $$
-  select case g when 'davinci' then 'Alquimistas de Da Vinci' when 'verne' then 'Exploradores de Verne'
-                when 'wells' then 'Viajeros de Wells' when 'tesla' then 'Guardianes de Tesla' else g end
+-- Cuántos tripulantes de un equipo ya enviaron el diagnóstico (antes o después).
+create or replace function mdt.diag_listos(v_eq int, v_momento text) returns int language sql stable as $$
+  select count(*)::int from mdt.diag_cierres c join mdt.tripulantes t on t.id = c.tripulante
+   where t.equipo = v_eq and c.momento = v_momento
 $$;
 
-create or replace function mdt.nombre_rol(r text) returns text language sql immutable as $$
-  select case r when 'piloto' then 'Líder Piloto de Vuelo' when 'copiloto' then 'Copiloto'
-                when 'comandante' then 'Comandante de Misión' when 'tripulante' then 'Tripulante de Élite' else r end
-$$;
-
-create or replace function mdt.sesion() returns int language sql stable as $$
-  select sesion from mdt.config where id = 1
-$$;
-
-create or replace function mdt.verificar_codigo(p_codigo text) returns void language plpgsql as $$
+create or replace function mdt.diag_tripulante(p_dispositivo text) returns mdt.tripulantes language plpgsql as $$
+declare v mdt.tripulantes;
 begin
-  if mdt.norm(p_codigo) is distinct from mdt.norm((select codigo_acceso from mdt.config where id = 1)) then
-    raise exception 'Código de acceso incorrecto.';
-  end if;
-end $$;
-
-create or replace function mdt.verificar_codigo_sala(p_codigo text) returns void language plpgsql as $$
-begin
-  if mdt.norm(p_codigo) is distinct from mdt.norm((select codigo_sala from mdt.config where id = 1)) then
-    raise exception 'Código de la Sala de Escape incorrecto.';
-  end if;
-end $$;
-
-create or replace function mdt.equipo_id(p_grupo text) returns int language plpgsql as $$
-declare v int;
-begin
-  select id into v from mdt.equipos where sesion = mdt.sesion() and grupo = p_grupo;
-  if v is null then
-    raise exception 'Este grupo todavía no tiene tripulación registrada.';
-  end if;
+  select t.* into v from mdt.tripulantes t join mdt.equipos e on e.id = t.equipo
+   where e.sesion = mdt.sesion() and t.dispositivo = p_dispositivo;
+  if v.id is null then raise exception 'REGISTRO:Este celular no está registrado en la sesión actual.'; end if;
   return v;
 end $$;
 
--- Cierra por tiempo (12:30) las estaciones vencidas: sin puntos.
-create or replace function mdt.vencer() returns void language plpgsql as $$
-begin
-  update mdt.avance a
-     set estado = 'agotada',
-         fin = a.inicio + make_interval(secs => e.limite_seg + e.gracia_seg),
-         seg_usados = e.limite_seg + e.gracia_seg,
-         pts_codigos = 0, pts_tiempo = 0, total = 0
-    from mdt.estaciones e
-   where e.id = a.estacion and a.estado = 'abierta'
-     and now() > a.inicio + make_interval(secs => e.limite_seg + e.gracia_seg);
-end $$;
+-- Estado del diagnóstico de un tripulante. Las respuestas correctas solo se
+-- entregan cuando ya envió el diagnóstico final.
+create or replace function mdt.diag_estado(v mdt.tripulantes) returns json language sql stable as $$
+  select json_build_object(
+    'activo', mdt.diag_activo(),
+    'antes', json_build_object(
+      'total', (select count(*) from mdt.diag_claves where momento = 'antes'),
+      'respondidas', coalesce((select json_agg(r.pregunta) from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta
+                                where r.tripulante = v.id and k.momento = 'antes'), '[]'::json),
+      'terminado', exists (select 1 from mdt.diag_cierres where tripulante = v.id and momento = 'antes')),
+    'despues', json_build_object(
+      'habilitado', exists (select 1 from mdt.avance where equipo = v.equipo and estacion = 'E5' and estado in ('cerrada', 'agotada')),
+      'total', (select count(*) from mdt.diag_claves where momento = 'despues'),
+      'respondidas', coalesce((select json_agg(r.pregunta) from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta
+                                where r.tripulante = v.id and k.momento = 'despues'), '[]'::json),
+      'terminado', exists (select 1 from mdt.diag_cierres where tripulante = v.id and momento = 'despues')),
+    'resultado', case when exists (select 1 from mdt.diag_cierres where tripulante = v.id and momento = 'despues') then json_build_object(
+      'aciertos_antes', (select count(*) from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta
+                          where r.tripulante = v.id and k.momento = 'antes' and r.correcta),
+      'aciertos_despues', (select count(*) from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta
+                            where r.tripulante = v.id and k.momento = 'despues' and r.correcta),
+      'detalle', coalesce((select json_agg(json_build_object('pregunta', k.pregunta, 'acierto', r.correcta, 'elegida', r.opcion,
+                                                             'correcta', k.correcta, 'porque', k.porque))
+                             from mdt.diag_claves k left join mdt.diag_respuestas r on r.pregunta = k.pregunta and r.tripulante = v.id
+                            where k.momento = 'despues'), '[]'::json)) end)
+$$;
 
--- Estado completo de un equipo (lo que necesita la consola).
 create or replace function mdt.estado_equipo(v_eq int) returns json language sql stable as $$
   select json_build_object(
     'grupo', (select grupo from mdt.equipos where id = v_eq),
     'ahora', now(),
     'tripulantes', coalesce((select json_agg(json_build_object('nombre', t.nombre, 'rol', t.rol, 'profesion', t.profesion) order by t.creado)
                                from mdt.tripulantes t where t.equipo = v_eq), '[]'::json),
+    'diagnostico', json_build_object(
+      'activo', mdt.diag_activo(),
+      'liberada', (select sala_liberada from mdt.equipos where id = v_eq),
+      'miembros', (select count(*) from mdt.tripulantes where equipo = v_eq),
+      'antes', mdt.diag_listos(v_eq, 'antes'),
+      'despues', mdt.diag_listos(v_eq, 'despues')),
     'estaciones', (select json_agg(json_build_object(
                       'id', e.id, 'numero', e.numero, 'nombre', e.nombre,
                       'limite', e.limite_seg, 'gracia', e.gracia_seg,
@@ -95,20 +118,6 @@ create or replace function mdt.estado_equipo(v_eq int) returns json language sql
   )
 $$;
 
--- ------------------------------------------------------- funciones públicas ----
--- 1. Verificar el código de acceso y ver la ocupación de los 4 grupos.
-create or replace function public.mdt_acceso(p_codigo text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-begin
-  perform mdt.verificar_codigo(p_codigo);
-  return json_build_object('ok', true, 'grupos', coalesce((
-    select json_object_agg(e.grupo, json_build_object(
-      'miembros', (select count(*) from mdt.tripulantes t where t.equipo = e.id),
-      'roles', coalesce((select json_object_agg(r.rol, r.n) from (select rol, count(*) n from mdt.tripulantes where equipo = e.id group by rol) r), '{}'::json)))
-    from mdt.equipos e where e.sesion = mdt.sesion()), '{}'::json));
-end $$;
-
--- 2. Unirse a la tripulación (Kit de tripulación, celular de cada persona).
 create or replace function public.mdt_unirse(p_codigo text, p_grupo text, p_nombre text, p_profesion text,
                                   p_rol text, p_autoriza boolean, p_dispositivo text) returns json
 language plpgsql security definer set search_path = mdt, public as $$
@@ -127,47 +136,29 @@ begin
     on conflict (sesion, grupo) do nothing;
   v_eq := mdt.equipo_id(p_grupo);
 
-  -- El mismo celular puede volver a registrarse: se reemplaza su registro anterior.
+  -- El mismo celular puede corregir su registro: se actualiza (y conserva su diagnóstico).
   select t.id into v_previo from mdt.tripulantes t join mdt.equipos e on e.id = t.equipo
    where e.sesion = mdt.sesion() and t.dispositivo = p_dispositivo;
-  if v_previo is not null then delete from mdt.tripulantes where id = v_previo; end if;
 
-  if (select count(*) from mdt.tripulantes where equipo = v_eq) >= 7 then
+  if (select count(*) from mdt.tripulantes where equipo = v_eq and id is distinct from v_previo) >= 7 then
     raise exception 'Este grupo ya tiene sus 7 tripulantes.';
   end if;
   v_cupo := case p_rol when 'tripulante' then 4 else 1 end;
-  select count(*) into v_ocupados from mdt.tripulantes where equipo = v_eq and rol = p_rol;
+  select count(*) into v_ocupados from mdt.tripulantes where equipo = v_eq and rol = p_rol and id is distinct from v_previo;
   if v_ocupados >= v_cupo then raise exception 'Ese rol ya está ocupado en este grupo. Revisen su escarapela.'; end if;
 
-  insert into mdt.tripulantes (equipo, nombre, profesion, rol, autoriza, dispositivo)
-  values (v_eq, v_nombre, v_prof, p_rol, true, p_dispositivo);
+  if v_previo is not null then
+    update mdt.tripulantes set equipo = v_eq, nombre = v_nombre, profesion = v_prof, rol = p_rol, autoriza = true where id = v_previo;
+  else
+    insert into mdt.tripulantes (equipo, nombre, profesion, rol, autoriza, dispositivo)
+    values (v_eq, v_nombre, v_prof, p_rol, true, p_dispositivo);
+  end if;
   return json_build_object('ok', true, 'grupo', p_grupo, 'rol', p_rol, 'nombre', v_nombre);
 end $$;
 
--- 3. Ver la tripulación de un grupo (Kit y Consola).
-create or replace function public.mdt_tripulacion(p_codigo text, p_grupo text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-declare v_eq int;
-begin
-  perform mdt.verificar_codigo(p_codigo);
-  select id into v_eq from mdt.equipos where sesion = mdt.sesion() and grupo = p_grupo;
-  return json_build_object('tripulantes', coalesce((select json_agg(json_build_object('nombre', nombre, 'rol', rol) order by creado)
-                                                    from mdt.tripulantes where equipo = v_eq), '[]'::json));
-end $$;
-
--- 4. Consola: estado completo del equipo.
-create or replace function public.mdt_consola(p_codigo text, p_grupo text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-begin
-  perform mdt.verificar_codigo_sala(p_codigo);
-  perform mdt.vencer();
-  return mdt.estado_equipo(mdt.equipo_id(p_grupo));
-end $$;
-
--- 5. Abrir una estación (en orden 1 → 5; una estación no puede tener dos grupos).
 create or replace function public.mdt_abrir(p_codigo text, p_grupo text, p_estacion text) returns json
 language plpgsql security definer set search_path = mdt, public as $$
-declare v_eq int; v_num int; v_prev text; v_otro text;
+declare v_eq int; v_num int; v_prev text; v_otro text; v_miembros int; v_listos int;
 begin
   perform mdt.verificar_codigo_sala(p_codigo);
   perform mdt.vencer();
@@ -181,6 +172,12 @@ begin
       if not exists (select 1 from mdt.avance where equipo = v_eq and estacion = v_prev and estado in ('cerrada', 'agotada')) then
         raise exception 'Primero deben cerrar la estación anterior.';
       end if;
+    elsif mdt.diag_activo() and not (select sala_liberada from mdt.equipos where id = v_eq) then
+      -- La Estación 1 se abre cuando toda la tripulación terminó el diagnóstico
+      -- inicial o cuando el Guía Especialista libera la Sala.
+      select count(*) into v_miembros from mdt.tripulantes where equipo = v_eq;
+      v_listos := mdt.diag_listos(v_eq, 'antes');
+      if v_listos < v_miembros then raise exception 'DIAGNOSTICO:%:%', v_listos, v_miembros; end if;
     end if;
     select e.grupo into v_otro from mdt.avance a join mdt.equipos e on e.id = a.equipo
      where a.estacion = p_estacion and a.estado = 'abierta' and e.sesion = mdt.sesion() and a.equipo <> v_eq limit 1;
@@ -190,78 +187,18 @@ begin
   return mdt.estado_equipo(v_eq);
 end $$;
 
--- 6. Responder un código: 2 intentos. Al segundo fallo se muestra la respuesta.
-create or replace function public.mdt_responder(p_codigo text, p_grupo text, p_codigo_id text, p_valor text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-declare v_eq int; c mdt.codigos; v_estado text; r mdt.respuestas; v_ok boolean;
-begin
-  perform mdt.verificar_codigo_sala(p_codigo);
-  perform mdt.vencer();
-  v_eq := mdt.equipo_id(p_grupo);
-  select * into c from mdt.codigos where id = p_codigo_id;
-  if c.id is null then raise exception 'Código no válido.'; end if;
-  select estado into v_estado from mdt.avance where equipo = v_eq and estacion = c.estacion;
-  if v_estado is distinct from 'abierta' then raise exception 'CERRADA:La estación ya está cerrada.'; end if;
-  if trim(coalesce(p_valor, '')) = '' then raise exception 'Escriban el código antes de validar.'; end if;
-  -- Las pruebas de cada estación se resuelven en orden (1, 2, 3 y luego la clave).
-  if exists (select 1 from mdt.codigos c2
-              left join mdt.respuestas r2 on r2.codigo = c2.id and r2.equipo = v_eq
-             where c2.estacion = c.estacion and c2.orden < c.orden
-               and not (coalesce(r2.correcta, false) or coalesce(r2.intentos, 0) >= 2)) then
-    raise exception 'Primero resuelvan la prueba anterior.';
-  end if;
-
-  insert into mdt.respuestas (equipo, codigo) values (v_eq, c.id) on conflict do nothing;
-  select * into r from mdt.respuestas where equipo = v_eq and codigo = c.id for update;
-  if r.correcta or r.intentos >= 2 then
-    return json_build_object('correcta', r.correcta, 'intentos', r.intentos, 'puntos', r.puntos, 'mostrar', c.mostrar);
-  end if;
-
-  v_ok := mdt.norm(p_valor) = any (c.respuestas);
-  update mdt.respuestas
-     set intentos = intentos + 1, correcta = v_ok, valor = upper(trim(p_valor)),
-         puntos = case when v_ok then c.puntos else 0 end
-   where equipo = v_eq and codigo = c.id
-   returning * into r;
-  return json_build_object('correcta', r.correcta, 'intentos', r.intentos, 'puntos', r.puntos,
-                           'mostrar', case when r.correcta or r.intentos >= 2 then c.mostrar end);
-end $$;
-
--- 7. Validar y finalizar la estación: detiene el reloj y calcula los puntos.
-create or replace function public.mdt_finalizar(p_codigo text, p_grupo text, p_estacion text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-declare v_eq int; a mdt.avance; e mdt.estaciones; v_seg int; v_cod int; v_tiempo int := 0; b jsonb;
-begin
-  perform mdt.verificar_codigo_sala(p_codigo);
-  perform mdt.vencer();
-  v_eq := mdt.equipo_id(p_grupo);
-  select * into a from mdt.avance where equipo = v_eq and estacion = p_estacion for update;
-  if a.equipo is null then raise exception 'La estación no ha comenzado.'; end if;
-  if a.estado = 'abierta' then
-    select * into e from mdt.estaciones where id = p_estacion;
-    v_seg := ceil(extract(epoch from now() - a.inicio));
-    select coalesce(sum(r.puntos), 0) into v_cod
-      from mdt.respuestas r join mdt.codigos c on c.id = r.codigo
-     where r.equipo = v_eq and c.estacion = p_estacion;
-    for b in select * from jsonb_array_elements(e.bandas) loop
-      if v_seg <= (b->>'hasta')::int then v_tiempo := (b->>'puntos')::int; exit; end if;
-    end loop;
-    update mdt.avance set estado = 'cerrada', fin = now(), seg_usados = v_seg,
-           pts_codigos = v_cod, pts_tiempo = v_tiempo, total = v_cod + v_tiempo
-     where equipo = v_eq and estacion = p_estacion;
-  end if;
-  return mdt.estado_equipo(v_eq);
-end $$;
-
--- 8. Pórtico: marcador en vivo de los 4 grupos.
 create or replace function public.mdt_tablero() returns json
 language plpgsql security definer set search_path = mdt, public as $$
 begin
   perform mdt.vencer();
-  return json_build_object('ahora', now(), 'grupos', coalesce((select json_agg(json_build_object(
+  return json_build_object('ahora', now(),
+    'diagnostico', mdt.diag_activo(),
+    'revelado', coalesce((select revelado from mdt.sesiones where id = mdt.sesion()), false),
+    'grupos', coalesce((select json_agg(json_build_object(
       'grupo', g.grupo,
       'registrado', e.id is not null,
       'miembros', (select count(*) from mdt.tripulantes t where t.equipo = e.id),
+      'diag_despues', coalesce(mdt.diag_listos(e.id, 'despues'), 0),
       'total', coalesce((select sum(total) from mdt.avance where equipo = e.id), 0),
       'terminadas', (select count(*) from mdt.avance where equipo = e.id and estado in ('cerrada', 'agotada')),
       'estaciones', coalesce((select json_object_agg(a.estacion, json_build_object('estado', a.estado, 'total', a.total))
@@ -274,21 +211,6 @@ begin
     left join mdt.equipos e on e.grupo = g.grupo and e.sesion = mdt.sesion()), '[]'::json));
 end $$;
 
--- 9. Evidencia de Prevena™ (prueba 5.3): se entrega cuando el equipo ya
---    resolvió el código 5.2 (acertó o agotó sus 2 intentos).
-create or replace function public.mdt_ventajas(p_codigo text, p_grupo text) returns json
-language plpgsql security definer set search_path = mdt, public as $$
-declare v_eq int;
-begin
-  perform mdt.verificar_codigo_sala(p_codigo);
-  v_eq := mdt.equipo_id(p_grupo);
-  if not exists (select 1 from mdt.respuestas where equipo = v_eq and codigo = '5.2' and (correcta or intentos >= 2)) then
-    raise exception 'Primero registren el código de la prueba 5.2.';
-  end if;
-  return coalesce((select valor from mdt.privado where clave = 'ventajas'), '{}'::jsonb)::json;
-end $$;
-
--- 10. Facilitador (con PIN): nueva sesión, código de acceso, reabrir grupo, exportar.
 create or replace function public.mdt_admin(p_pin text, p_accion text, p_dato text default null) returns json
 language plpgsql security definer set search_path = mdt, public as $$
 declare v_id int;
@@ -310,12 +232,19 @@ begin
   elsif p_accion = 'panel' then
     perform mdt.vencer();
     return json_build_object('ahora', now(), 'sesion', mdt.sesion(),
+      'diagnostico', mdt.diag_activo(),
+      'revelado', coalesce((select revelado from mdt.sesiones where id = mdt.sesion()), false),
       'codigo_acceso', (select codigo_acceso from mdt.config where id = 1),
       'codigo_sala', (select codigo_sala from mdt.config where id = 1),
       'grupos', (select json_agg(json_build_object(
         'grupo', g.grupo,
         'registrado', e.id is not null,
-        'tripulantes', coalesce((select json_agg(json_build_object('nombre', t.nombre, 'profesion', t.profesion, 'rol', t.rol) order by t.creado)
+        'sala_liberada', coalesce(e.sala_liberada, false),
+        'diag_antes', coalesce(mdt.diag_listos(e.id, 'antes'), 0),
+        'diag_despues', coalesce(mdt.diag_listos(e.id, 'despues'), 0),
+        'tripulantes', coalesce((select json_agg(json_build_object('nombre', t.nombre, 'profesion', t.profesion, 'rol', t.rol,
+                                   'antes', exists (select 1 from mdt.diag_cierres c where c.tripulante = t.id and c.momento = 'antes'),
+                                   'despues', exists (select 1 from mdt.diag_cierres c where c.tripulante = t.id and c.momento = 'despues')) order by t.creado)
                                    from mdt.tripulantes t where t.equipo = e.id), '[]'::json),
         'total', coalesce((select sum(total) from mdt.avance where equipo = e.id), 0),
         'estaciones', coalesce((select json_object_agg(a.estacion, json_build_object('estado', a.estado, 'total', a.total, 'segundos', a.seg_usados))
@@ -341,6 +270,14 @@ begin
     return json_build_object('ok', true);
   elsif p_accion = 'borrar_grupo' then
     delete from mdt.equipos where sesion = mdt.sesion() and grupo = p_dato;
+    return json_build_object('ok', true);
+  elsif p_accion = 'liberar_sala' then
+    -- Abre la Estación 1 aunque falten tripulantes por terminar el diagnóstico inicial.
+    update mdt.equipos set sala_liberada = true where sesion = mdt.sesion() and grupo = p_dato;
+    return json_build_object('ok', true);
+  elsif p_accion = 'revelar' then
+    -- El Gran Tablero muestra al ganador aunque falten diagnósticos finales.
+    update mdt.sesiones set revelado = true where id = mdt.sesion();
     return json_build_object('ok', true);
   elsif p_accion = 'claves' then
     -- Hoja de claves para el Guía Especialista (solo con PIN).
@@ -375,9 +312,102 @@ begin
                case a.estado when 'cerrada' then 'Completada' when 'agotada' then 'Cerrada por tiempo' else 'En juego' end as "Estado",
                a.seg_usados as "Segundos", a.pts_codigos as "Puntos respuestas", a.pts_tiempo as "Puntos agilidad", a.total as "Total"
           from mdt.avance a join mdt.equipos e on e.id = a.equipo
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json),
+      -- Diagnóstico: una fila por respuesta. "Opción elegida" es la posición (0 a 3)
+      -- en js/diagnostico-contenido.js; el panel la convierte en texto.
+      'diagnostico', coalesce((select json_agg(x order by x."Sesión", x."Grupo", x."Nombre", x."Momento", x."orden") from (
+        select e.sesion as "Sesión", mdt.nombre_grupo(e.grupo) as "Grupo", t.nombre as "Nombre", t.profesion as "Profesión",
+               mdt.nombre_rol(t.rol) as "Rol", case k.momento when 'antes' then 'Antes' else 'Después' end as "Momento",
+               r.pregunta as "Pregunta", substring(r.pregunta from 2)::int as "orden", r.opcion as "Opción elegida",
+               case when r.correcta then 'SÍ' else 'NO' end as "Acierto", r.certeza as "Certeza", r.segundos as "Segundos",
+               case when r.certeza = 'Seguro' and r.correcta then 'Dominio'
+                    when r.correcta then 'Dominio frágil'
+                    when r.certeza = 'Seguro' then 'Error peligroso'
+                    else 'Vacío reconocido' end as "Cuadrante",
+               to_char(r.creado at time zone 'America/Bogota', 'YYYY-MM-DD HH24:MI') as "Fecha"
+          from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta
+          join mdt.tripulantes t on t.id = r.tripulante join mdt.equipos e on e.id = t.equipo
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json),
+      'reflexiones', coalesce((select json_agg(x order by x."Sesión", x."Grupo", x."Nombre", x."Momento") from (
+        select e.sesion as "Sesión", mdt.nombre_grupo(e.grupo) as "Grupo", t.nombre as "Nombre", t.profesion as "Profesión",
+               case c.momento when 'antes' then 'Antes' else 'Después' end as "Momento",
+               coalesce(c.rutina[1], '') as "Rutina 1", coalesce(c.rutina[2], '') as "Rutina 2", coalesce(c.rutina[3], '') as "Rutina 3",
+               c.imagen as "Imagen", c.palabra as "Palabra",
+               to_char(c.terminado at time zone 'America/Bogota', 'YYYY-MM-DD HH24:MI') as "Enviado"
+          from mdt.diag_cierres c join mdt.tripulantes t on t.id = c.tripulante join mdt.equipos e on e.id = t.equipo
+         where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json),
+      'resumen', coalesce((select json_agg(x order by x."Sesión", x."Grupo", x."Nombre") from (
+        select e.sesion as "Sesión", mdt.nombre_grupo(e.grupo) as "Grupo", t.nombre as "Nombre", t.profesion as "Profesión",
+               mdt.nombre_rol(t.rol) as "Rol",
+               case when exists (select 1 from mdt.diag_cierres c where c.tripulante = t.id and c.momento = 'antes') then 'SÍ' else 'NO' end as "Terminó antes",
+               case when exists (select 1 from mdt.diag_cierres c where c.tripulante = t.id and c.momento = 'despues') then 'SÍ' else 'NO' end as "Terminó después",
+               d.antes as "Aciertos antes (de 10)", d.despues as "Aciertos después (de 10)", d.despues - d.antes as "Cambio",
+               d.peligrosos as "Errores con certeza · después"
+          from mdt.tripulantes t join mdt.equipos e on e.id = t.equipo
+          cross join lateral (
+            select count(*) filter (where k.momento = 'antes' and r.correcta) as antes,
+                   count(*) filter (where k.momento = 'despues' and r.correcta) as despues,
+                   count(*) filter (where k.momento = 'despues' and not r.correcta and r.certeza = 'Seguro') as peligrosos
+              from mdt.diag_respuestas r join mdt.diag_claves k on k.pregunta = r.pregunta where r.tripulante = t.id) d
          where p_dato = 'historico' or e.sesion = mdt.sesion()) x), '[]'::json));
   end if;
   raise exception 'Acción no válida.';
+end $$;
+
+-- 11. Diagnóstico: estado del tripulante (por su celular).
+create or replace function public.mdt_diagnostico(p_codigo text, p_dispositivo text) returns json
+language plpgsql security definer set search_path = mdt, public as $$
+begin
+  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.vencer();
+  return mdt.diag_estado(mdt.diag_tripulante(p_dispositivo));
+end $$;
+
+-- 12. Diagnóstico: una respuesta. Sin volver atrás; el acierto se calcula aquí.
+create or replace function public.mdt_diag_responder(p_codigo text, p_dispositivo text, p_pregunta text,
+                                          p_opcion int, p_certeza text, p_segundos int) returns json
+language plpgsql security definer set search_path = mdt, public as $$
+declare v mdt.tripulantes; k mdt.diag_claves;
+begin
+  perform mdt.verificar_codigo(p_codigo);
+  perform mdt.vencer();
+  v := mdt.diag_tripulante(p_dispositivo);
+  select * into k from mdt.diag_claves where pregunta = p_pregunta;
+  if k.pregunta is null then raise exception 'Pregunta no válida.'; end if;
+  if p_opcion is null or p_opcion not between 0 and 3 then raise exception 'Elija una opción.'; end if;
+  if p_certeza is null or p_certeza not in ('Seguro', 'Creo que sí', 'Lo adivino') then raise exception 'Indique qué tan seguro está de su respuesta.'; end if;
+  if k.momento = 'despues' and not exists (select 1 from mdt.avance where equipo = v.equipo and estacion = 'E5' and estado in ('cerrada', 'agotada')) then
+    raise exception 'El diagnóstico final se abre cuando su grupo cierre la Estación 5.';
+  end if;
+  if exists (select 1 from mdt.diag_cierres where tripulante = v.id and momento = k.momento) then
+    raise exception 'Este diagnóstico ya fue enviado.';
+  end if;
+  insert into mdt.diag_respuestas (tripulante, pregunta, opcion, correcta, certeza, segundos)
+  values (v.id, k.pregunta, p_opcion, p_opcion = k.correcta, p_certeza, greatest(0, least(coalesce(p_segundos, 0), 3600)))
+  on conflict do nothing;
+  return json_build_object('ok', true);
+end $$;
+
+-- 13. Diagnóstico: rutina de pensamiento, imagen y palabra; cierra el momento.
+create or replace function public.mdt_diag_cerrar(p_codigo text, p_dispositivo text, p_momento text,
+                                       p_rutina text[], p_imagen text, p_palabra text) returns json
+language plpgsql security definer set search_path = mdt, public as $$
+declare v mdt.tripulantes; v_faltan int;
+begin
+  perform mdt.verificar_codigo(p_codigo);
+  v := mdt.diag_tripulante(p_dispositivo);
+  if p_momento not in ('antes', 'despues') then raise exception 'Momento no válido.'; end if;
+  select count(*) into v_faltan from mdt.diag_claves k
+   where k.momento = p_momento and not exists (select 1 from mdt.diag_respuestas r where r.tripulante = v.id and r.pregunta = k.pregunta);
+  if v_faltan > 0 then raise exception 'Faltan % preguntas por responder.', v_faltan; end if;
+  if length(trim(coalesce(p_imagen, ''))) = 0 then raise exception 'Elija una imagen.'; end if;
+  if length(trim(coalesce(p_palabra, ''))) = 0 then raise exception 'Escriba una palabra que acompañe la imagen.'; end if;
+  insert into mdt.diag_cierres (tripulante, momento, rutina, imagen, palabra)
+  values (v.id, p_momento,
+          coalesce((select array_agg(left(trim(x), 1000) order by n) from unnest(p_rutina) with ordinality u(x, n)), '{}'),
+          left(trim(p_imagen), 40), left(upper(trim(p_palabra)), 40))
+  on conflict do nothing;
+  return mdt.diag_estado(v);
 end $$;
 
 -- --------------------------------------------------------------- permisos ----
@@ -389,5 +419,7 @@ do $$ begin
   execute 'grant execute on function public.mdt_acceso(text), public.mdt_unirse(text,text,text,text,text,boolean,text),
            public.mdt_tripulacion(text,text), public.mdt_consola(text,text), public.mdt_abrir(text,text,text),
            public.mdt_responder(text,text,text,text), public.mdt_finalizar(text,text,text), public.mdt_tablero(),
-           public.mdt_ventajas(text,text), public.mdt_admin(text,text,text) to anon, authenticated';
+           public.mdt_ventajas(text,text), public.mdt_admin(text,text,text),
+           public.mdt_diagnostico(text,text), public.mdt_diag_responder(text,text,text,int,text,int),
+           public.mdt_diag_cerrar(text,text,text,text[],text,text) to anon, authenticated';
 end $$;

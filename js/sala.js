@@ -123,7 +123,12 @@
       return '<li class="nodo ' + clase + '"><span class="nodo-num">' + x.numero + '</span><span class="nodo-info"><b>' + M.esc(c.nombre) + '</b><small>'
         + M.esc(x.estado === 'agotada' ? 'Cerrada por tiempo' : x.estado === 'cerrada' ? 'Nodo restaurado' : c.subtitulo) + '</small></span><span class="nodo-pts">' + pts + '</span></li>';
     }).join('');
-    const cs = sig && contenido(sig.id);
+    const cs = sig && contenido(sig.id), dg = E.diagnostico || {};
+    const esperaDiag = sig && sig.numero === 1 && dg.activo && !dg.liberada;
+    const avisoDiag = esperaDiag ? '<div class="hud bloque diag-tarjeta' + (dg.antes >= dg.miembros && dg.miembros > 0 ? ' listo' : '') + '" style="margin:12px 0"><p class="sobretitulo">Diagnóstico inicial</p>'
+      + '<p style="margin:0 0 8px"><b style="color:var(--malachite);font-family:var(--mono);font-size:20px">' + dg.antes + ' / ' + dg.miembros + '</b> tripulantes listos.</p>'
+      + '<p class="suave" style="font-size:13px;margin:0">Cada tripulante lo responde en su celular, en el Pórtico de Entrada. La Estación 1 se abre cuando todos terminen o cuando el Guía Especialista libere la Sala.</p>'
+      + '<div class="acciones" style="justify-content:flex-start"><button class="btn fantasma pequeno" data-a="actualizarLinea">ACTUALIZAR</button></div></div>' : '';
     pinta(cab('Línea de vida') + '<main class="pagina">'
       + '<p class="sobretitulo">El laberinto temporal</p><h2 class="seccion">Línea de vida del paciente</h2>'
       + '<p class="suave" style="margin-bottom:16px">Cinco estaciones en orden. Doce minutos en cada una. Puntos acumulados: <b style="color:var(--malachite)">' + E.total + '</b></p>'
@@ -131,7 +136,7 @@
       + (cs ? '<section class="hud bloque" style="margin-top:20px"><p class="sobretitulo">Siguiente · Estación ' + sig.numero + '</p><h2 class="seccion">' + M.esc(cs.nombre) + '</h2>'
               + '<p class="suave">' + M.esc(cs.subtitulo) + ' · ' + M.esc(cs.lugar) + '</p>'
               + '<p style="margin-top:10px;font-size:14px">Cuando el Guía Especialista tenga lista la estación en la maleta, inicien. Al iniciar empiezan a correr los 12 minutos.</p>'
-              + '<p class="error">' + M.esc(msg || '') + '</p>'
+              + avisoDiag + '<p class="error">' + M.esc(msg || '') + '</p>'
               + '<button class="btn primario grande ancho" data-a="abrir" data-est="' + sig.id + '">INICIAR ESTACIÓN ' + sig.numero + ' · 12:00</button></section>' : '')
       + '</main>');
   }
@@ -143,6 +148,11 @@
       M.decir('Estación ' + c.numero + ': ' + c.nombre + '. ' + c.narrativa);
     } catch (e) {
       const m = e.message || '';
+      if (/^DIAGNOSTICO:/.test(m)) {
+        const p = m.split(':'); try { await refrescar(); } catch (x) {}
+        const n = p[2] - p[1];
+        return pLinea((n === 1 ? 'Falta 1 tripulante' : 'Faltan ' + n + ' tripulantes') + ' por terminar el diagnóstico inicial. Pídanle' + (n === 1 ? '' : 's') + ' que lo termine' + (n === 1 ? '' : 'n') + ' en su celular o pidan al Guía Especialista que libere la Sala.');
+      }
       if (/^OCUPADA:/.test(m)) {
         const otro = M.grupo(m.split(':')[1]).nombre;
         return pLinea('La estación está ocupada por ' + otro + '. Esperen a que terminen y vuelvan a intentarlo.');
@@ -419,7 +429,11 @@
       + '<table class="tabla-puntos"><tbody>' + filas + '</tbody></table></section>'
       + '<section class="hud bloque" id="guardian">' + guardian('El Guardián de la Línea del Tiempo') + '<p class="frase-cierre">' + M.esc(J.final.frase) + '</p>'
       + '<div class="acciones"><button class="btn contorno" data-a="escucharFinal">▶ ESCUCHAR</button></div></section>'
-      + '<p class="suave centro" style="margin-top:16px">Miren El Gran Tablero para conocer al grupo ganador.</p></main>');
+      + ((E.diagnostico || {}).activo ? '<section class="hud bloque diag-tarjeta"><p class="sobretitulo">Diagnóstico final · ahora</p>'
+          + '<p>Antes de conocer al equipo ganador, cada tripulante (también usted) responde el diagnóstico final en su celular, en el Pórtico de Entrada. El Gran Tablero revela al ganador cuando todos terminen.</p>'
+          + '<div class="acciones"><a class="btn primario grande latido" href="' + M.esc(M.urlDe('entrada.html', {})) + '">RESPONDER MI DIAGNÓSTICO FINAL →</a></div></section>'
+          : '<p class="suave centro" style="margin-top:16px">Miren El Gran Tablero para conocer al grupo ganador.</p>')
+      + '</main>');
     M.decir(J.final.mensaje + ' ' + J.final.frase);
     try {
       const t = await M.rpc('mdt_tablero', {});
@@ -458,7 +472,7 @@
     if (a === 'cerrarModal') { const m = document.getElementById('modal'); if (m) m.remove(); return; }
     if (a === 'reintentar') return cargar();
     if (a === 'escucharBienvenida') return hablarBienvenida();
-    if (a === 'actualizar') return cargar();
+    if (a === 'actualizar' || a === 'actualizarLinea') return cargar();
     if (a === 'cruzar') { local[clave('bienvenida')] = 1; guardarLocal(); M.callar(); M.SFX.portal(); pantalla = 'linea'; return render(); }
     if (a === 'abrir') { b.disabled = true; b.textContent = 'ABRIENDO…'; return abrir(b.dataset.est); }
     if (a === 'escucharTarjeta') { const c = contenido(vista.est); return M.decir(textoTarjeta(c, c.pruebas[vista.tab])); }

@@ -390,7 +390,7 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .demo-intro .titulo-juego { text-align: left; margin-bottom: 10px; }
 .momentos { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .momentos li { position: relative; padding: 14px 12px 12px; border: 1px solid var(--linea); border-radius: 12px; background: rgba(0, 0, 0, .55); }
-.momentos .num { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--malachite); color: #00140f; font: 700 13px var(--display); margin-bottom: 8px; }
+.momentos .num { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px; background: var(--malachite); color: #00140f; font: 700 13px var(--display); margin-bottom: 8px; }
 .momentos b { display: block; font: 700 12px/1.3 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--malachite); }
 .momentos small { color: var(--gris); font-size: 13px; }
 .pestanas-demo { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -420,3 +420,59 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .clave-caja .clave-grande { font-size: clamp(24px, 5vw, 40px); }
 .pestana.bloqueada { opacity: .45; cursor: not-allowed; }
 .pestana .candadito { font-size: 11px; margin-right: 6px; }
+
+/* ---------------------------------------------- diagnóstico antes y después */
+.diag-progreso { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font: 700 11px var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--gris); }
+.diag-progreso .pista { flex: 1; height: 4px; border-radius: 4px; background: var(--linea-suave); overflow: hidden; }
+.diag-progreso .pista i { display: block; height: 100%; background: var(--malachite); box-shadow: var(--brillo); }
+.diag-pregunta { font-size: 18px; font-weight: 700; line-height: 1.45; margin: 0 0 16px; }
+.diag-opciones { display: grid; gap: 10px; }
+.diag-opciones .opcion { min-height: 54px; font-weight: 600; font-size: 15px; }
+.diag-opciones .opcion .letra { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--linea); display: grid; place-items: center; font: 700 12px var(--display); color: var(--malachite); }
+.diag-opciones .opcion.sel .letra { background: var(--malachite); color: var(--negro); }
+.diag-certeza { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--linea-suave); }
+.diag-certeza p { margin: 0 0 10px; font-weight: 700; }
+.diag-certeza .opciones-vel button { font-size: 11px; }
+.diag-imagenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.diag-imagenes button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 8px; border: 1px solid var(--linea-suave); background: rgba(0, 0, 0, .55); color: var(--gris); font-size: 12px; font-weight: 700; line-height: 1.2; }
+.diag-imagenes button svg { width: 38px; height: 38px; color: var(--malachite); }
+.diag-imagenes button.sel { border-color: var(--malachite); color: var(--blanco); background: rgba(5, 221, 77, .12); box-shadow: inset 0 0 0 1px var(--malachite); }
+.campo textarea { width: 100%; min-height: 76px; resize: vertical; background: rgba(0, 0, 0, .65); border: 1px solid var(--linea); border-radius: 8px; padding: 12px; color: var(--blanco); font: 400 16px/1.45 var(--cuerpo); }
+.campo textarea:focus { outline: none; border-color: var(--malachite); box-shadow: 0 0 0 3px rgba(5, 221, 77, .2); }
+.diag-tarjeta { border-color: var(--malachite); }
+.diag-tarjeta.listo { border-color: var(--linea-suave); }
+.diag-tarjeta h3 { margin: 4px 0 8px; font: 700 16px var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.diag-avance { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 14px 0 6px; font-family: var(--mono); }
+.diag-avance div { text-align: center; }
+.diag-avance b { display: block; font: 900 40px var(--display); color: var(--malachite); }
+.diag-avance small { color: var(--gris); font: 700 10px var(--display); letter-spacing: .14em; text-transform: uppercase; }
+.diag-avance .flecha { font-size: 26px; color: var(--gris); }
+.diag-detalle { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.diag-detalle li { padding: 12px; border: 1px solid var(--linea-suave); border-left: 3px solid var(--alarma); border-radius: 8px; font-size: 14px; }
+.diag-detalle li.bien { border-left-color: var(--malachite); }
+.diag-detalle li b { display: block; margin-bottom: 6px; font-size: 15px; }
+.diag-detalle li p { margin: 4px 0 0; color: var(--gris); }
+.diag-detalle li p strong { color: var(--blanco); }
+
+/* ------------------------------------------- demo · nota de claves (esquina) */
+.nota-claves { position: fixed; right: 16px; bottom: 16px; z-index: 40; width: min(300px, calc(100vw - 32px)); max-height: min(72vh, 620px); display: flex; flex-direction: column;
+  background: rgba(2, 10, 8, .96); border: 1px solid var(--malachite); border-radius: 10px; box-shadow: var(--sombra), var(--brillo); font-size: 13px; }
+.nota-claves.cerrada { width: auto; background: none; border: 0; box-shadow: none; }
+.nota-claves .nota-tab { padding: 10px 14px; border-radius: 999px; border: 1px solid var(--malachite); background: rgba(2, 10, 8, .96); color: var(--malachite); font: 700 12px var(--display); letter-spacing: .1em; box-shadow: var(--brillo); cursor: pointer; }
+.nota-claves header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--linea); }
+.nota-claves header b { font: 700 12px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--malachite); }
+.nota-claves header button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--linea); background: none; color: var(--blanco); font-size: 18px; line-height: 1; cursor: pointer; }
+.nota-cuerpo { padding: 10px 12px 12px; overflow-y: auto; }
+.nota-cuerpo form p { margin: 0 0 8px; color: var(--gris); }
+.nota-cuerpo form .entrada { padding: 10px; font-size: 15px; margin-bottom: 8px; }
+.nota-codigos { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 0 0 8px; }
+.nota-codigos dt { color: var(--gris); font: 700 10px var(--display); letter-spacing: .12em; text-transform: uppercase; }
+.nota-codigos dd { margin: 0 0 6px; font: 600 17px var(--mono); color: var(--blanco); letter-spacing: .04em; }
+.nota-est { margin: 10px 0 4px; font: 700 10px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--malachite); }
+.nota-cuerpo ul { list-style: none; margin: 0; padding: 0; }
+.nota-cuerpo li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--linea-suave); }
+.nota-cuerpo li span { color: var(--gris); font-family: var(--mono); }
+.nota-cuerpo li b { font-family: var(--mono); text-align: right; word-break: break-word; }
+.nota-pie { margin: 10px 0 6px; color: var(--gris); font-size: 12px; }
+.nota-acc { display: flex; gap: 8px; }
+.nota-acc button { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--linea); background: none; color: var(--blanco); font: 700 10px var(--display); letter-spacing: .08em; cursor: pointer; }

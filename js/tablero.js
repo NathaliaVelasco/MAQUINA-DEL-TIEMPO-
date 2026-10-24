@@ -19,7 +19,7 @@
       const trans = (M.ahora() - new Date(g.actual.inicio).getTime()) / 1000, rest = g.actual.limite - trans;
       return { texto: 'En Estación ' + n, reloj: rest > 0 ? M.mmss(rest) : '+' + M.mmss(-rest), gracia: rest <= 0 };
     }
-    if (g.terminadas >= 5) return { texto: 'Misión cumplida', reloj: '' };
+    if (g.terminadas >= 5) return { texto: T && T.diagnostico && g.diag_despues < g.miembros ? 'Misión cumplida · diagnóstico final ' + g.diag_despues + ' / ' + g.miembros : 'Misión cumplida', reloj: '' };
     if (g.terminadas > 0) return { texto: 'Estación ' + g.terminadas + ' terminada · siguiente en espera', reloj: '' };
     return { texto: 'Tripulación a bordo', reloj: '' };
   }
@@ -63,6 +63,9 @@
     if (!T) return;
     const reg = T.grupos.filter(g => g.registrado);
     if (!reg.length || !reg.every(g => g.terminadas >= 5)) return;
+    // Con diagnóstico: el ganador se revela cuando todos enviaron el diagnóstico
+    // final o cuando el Guía Especialista lo decide.
+    if (T.diagnostico && !T.revelado && !reg.every(g => g.diag_despues >= g.miembros)) return;
     const orden = ordenar(reg), top = orden[0];
     const firma = reg.map(g => g.grupo + g.total).join('|');
     if (ganadorVisto === firma || document.getElementById('ganador')) return;
