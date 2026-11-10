@@ -498,3 +498,8 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .qr .codigo-grande { display: block; margin-top: .4vw; font: 700 clamp(16px, 2vw, 40px) var(--mono); letter-spacing: .08em; color: var(--blanco); }
 .tablero-ctrl { position: fixed; right: 12px; bottom: 12px; z-index: 30; display: flex; gap: 8px; opacity: .45; }
 .tablero-ctrl:hover, .tablero-ctrl:focus-within { opacity: 1; }
+
+/* Paso siguiente en el Pórtico de Entrada */
+.siguiente { border-color: var(--malachite); }
+.siguiente-texto { margin: 8px 0 0; font-size: 16px; line-height: 1.45; }
+.siguiente .acciones { margin-top: 14px; }

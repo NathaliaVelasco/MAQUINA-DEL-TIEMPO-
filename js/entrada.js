@@ -309,9 +309,15 @@
           : '<p class="suave" style="margin-top:16px;font-size:14px">El Comandante de Misión conduce el juego desde su celular.</p>')
       + '</section>'
       + (urgente ? '' : '<div id="diag">' + tarjetaDiag() + '</div>')
+      + '<section class="hud bloque siguiente"><p class="sobretitulo">Siguiente paso</p>'
+      + '<p class="siguiente-texto"><b>¡Tu grupo ' + M.esc(g.nombre) + ' está listo!</b> ' + (registro.rol === 'comandante'
+          ? 'Ahora entra a la Sala de Escape con el botón de arriba y digita los códigos de tu grupo.'
+          : 'Tu Comandante de Misión entrará a la Sala de Escape y digitará los códigos. Mientras tanto, mira quién más está participando.') + '</p>'
+      + '<div class="acciones"><button class="btn primario ancho" id="verGrupos">VER LOS 4 GRUPOS Y SUS INTEGRANTES →</button></div></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
       + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button></div>'
       + '</main>');
+    document.getElementById('verGrupos').onclick = () => { clearInterval(sondeo); pGrupos(); };
     document.getElementById('cambiar').onclick = async () => {
       clearInterval(sondeo);
       try { grupos = (await M.rpc('mdt_acceso', { p_codigo: codigo })).grupos || {}; } catch (e) {}
@@ -319,6 +325,37 @@
       pFormulario();
     };
     tripulacion(); clearInterval(sondeo); sondeo = setInterval(tripulacion, 5000);
+  }
+  /* Vista de todos los grupos: quién está registrado y participando. */
+  async function pGrupos() {
+    const g0 = M.grupo(registro.grupo);
+    pinta(cab('Los 4 grupos') + '<main class="pagina">'
+      + '<section class="hud bloque siguiente"><p class="sobretitulo">Estado de la misión</p>'
+      + '<p class="siguiente-texto">Estos son los grupos que ya se registraron en esta sesión. Cuando su Comandante de Misión esté listo, entren a la Sala de Escape.</p>'
+      + (registro.rol === 'comandante' ? '<div class="acciones"><a class="btn primario ancho latido" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">ENTRAR A LA SALA DE ESCAPE →</a></div>' : '')
+      + '</section>'
+      + '<div id="todos"><p class="suave centro">Cargando grupos…</p></div>'
+      + '<div class="acciones"><button class="btn fantasma pequeno" id="volver">← Volver a mi credencial</button></div>'
+      + '</main>');
+    document.getElementById('volver').onclick = () => { clearInterval(sondeo); pCredencial(); };
+    const pintaTodos = async () => {
+      const cont = document.getElementById('todos'); if (!cont) return clearInterval(sondeo);
+      const bloques = await Promise.all(J.grupos.map(async g => {
+        let t = [];
+        try { t = (await M.rpc('mdt_tripulacion', { p_codigo: codigo, p_grupo: g.id })).tripulantes || []; } catch (e) {}
+        const propio = g.id === registro.grupo;
+        let filas = t.map(x => '<li><span>' + M.esc(x.nombre) + '</span><span>' + M.esc(M.rol(x.rol).nombre) + '</span></li>').join('');
+        for (let i = t.length; i < 7; i++) filas += '<li class="vacio"><span>Esperando tripulante…</span><span></span></li>';
+        const estado = t.length >= 7 ? 'Grupo completo' : (t.length ? t.length + ' de 7 registrados' : 'Sin registros');
+        return '<section class="hud bloque"><span class="chip-grupo" style="--g:' + g.color + '"><i></i>' + M.esc(g.nombre) + '</span>'
+          + (propio ? ' <small class="suave">(tu grupo)</small>' : '')
+          + '<p class="suave" style="font-size:13px;margin:6px 0 0">' + estado + '</p>'
+          + '<ul class="lista-tripulacion">' + filas + '</ul></section>';
+      }));
+      cont.innerHTML = bloques.join('');
+    };
+    await pintaTodos();
+    clearInterval(sondeo); sondeo = setInterval(pintaTodos, 5000);
   }
   async function tripulacion() {
     const ul = document.getElementById('trip'); if (!ul) return clearInterval(sondeo);
