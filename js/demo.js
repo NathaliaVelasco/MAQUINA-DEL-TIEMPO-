@@ -30,7 +30,11 @@
     { id: 'cierre', nombre: 'Memoria de la Ruta', archivo: 'memoria-de-la-ruta.html', marco: 'celular', quien: 'Cada participante, en su celular o computador',
       cuando: 'Después de la experiencia (se envía el enlace)',
       que: ['Las 5 paradas (las postales) en digital: del minuto cero a la reconstrucción.', 'Cada parada se gira: frente con ilustración y texto; reverso con mensaje clave y referencias.', 'Termina con la línea de tiempo de los 5 mensajes clave.'],
-      enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/memoria-de-la-ruta.html' }
+      enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/memoria-de-la-ruta.html' },
+    { id: 'instructivo', nombre: 'Instructivo de la maleta', archivo: 'https://www.experienciasimone.com/maquina-del-tiempo/Instructivo-Maleta/', marco: 'sin', quien: 'Guía Especialista y coordinación de la experiencia',
+      cuando: 'Antes de la sesión, para preparar la maleta y el montaje',
+      que: ['Cómo abrir, montar y recoger la maleta del juego físico.', 'Qué contiene cada baúl, ficha y kit AbThera™, y cómo se conectan con el ecosistema digital.', 'La página pide la clave de acceso que entrega la coordinación: no se muestra en esta demostración.'],
+      enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/Instructivo-Maleta/' }
   ];
 
   const MOMENTOS = [
@@ -49,6 +53,7 @@
   if (!PANTALLAS.some(p => p.id === sel)) sel = 'guia';
 
   function marco(p) {
+    if (p.marco === 'sin') return '<div class="marco-sin hud"><p class="sobretitulo">Instructivo protegido</p><p class="suave">Se abre en una pestaña nueva con el botón de abajo. Pide la clave de acceso que entrega la coordinación.</p></div>';
     const src = p.archivo + '?demo=1';
     if (p.marco === 'pantalla') {
       return '<div class="marco-pantalla"><div class="escala"><iframe title="' + M.esc(p.nombre) + '" src="' + src + '" loading="lazy"></iframe></div><span class="pie-tv"></span></div>';
@@ -72,7 +77,7 @@
       + '<section class="bloque"><p class="sobretitulo">La ruta completa</p><ol class="momentos">'
       + MOMENTOS.map(m => '<li><span class="num">' + m[0] + '</span><b>' + M.esc(m[1]) + '</b><small>' + M.esc(m[2]) + '</small></li>').join('') + '</ol></section>'
 
-      + '<section class="bloque"><p class="sobretitulo">Las 6 pantallas · tóquelas para verlas funcionando</p>'
+      + '<section class="bloque"><p class="sobretitulo">Las pantallas · tóquelas para verlas funcionando</p>'
       + '<nav class="pestanas-demo">' + PANTALLAS.map(x => '<button data-p="' + x.id + '" class="' + (x.id === sel ? 'sel' : '') + '">' + M.esc(x.nombre) + '</button>').join('') + '</nav>'
       + '<div class="demo-grid ' + (p.marco === 'pantalla' ? 'ancha' : '') + '">'
       + '<div class="hud demo-info"><h2 class="seccion">' + M.esc(p.nombre) + '</h2>'
@@ -104,7 +109,7 @@
      datos (no están en este archivo).
      ------------------------------------------------------------------------ */
   let notaAbierta = M.leer('demo-nota', null), K = null, kErr = '';
-  if (notaAbierta === null) notaAbierta = window.innerWidth > 900;   // en celular empieza minimizada
+  if (notaAbierta === null) notaAbierta = false;   // empieza minimizada en la esquina: solo el botón 🔑 CLAVES
   function pinGuardado() { try { return sessionStorage.getItem('mdt-pin') || ''; } catch (e) { return ''; } }
   function notaClaves() {
     if (!notaAbierta) return '<aside class="nota-claves cerrada"><button class="nota-tab" data-k="abrir">🔑 CLAVES</button></aside>';
