@@ -72,6 +72,8 @@
       + '<div class="campo"><span>Su grupo</span><div class="opciones">' + opGrupos + '</div></div>'
       + '<label class="campo"><span>Nombre completo</span><input type="text" id="nombre" class="mayus" autocomplete="name" autocapitalize="characters" maxlength="80" value="' + M.esc(prev.nombre || '') + '" placeholder="NOMBRES Y APELLIDOS"></label>'
       + '<label class="campo"><span>Profesión</span><input type="text" id="profesion" class="mayus" autocapitalize="characters" maxlength="60" value="' + M.esc(prev.profesion || '') + '" placeholder="EJ: CIRUJANO GENERAL"></label>'
+      + '<section class="hud bloque roles-resumen"><p class="sobretitulo">Roles de la misión</p>'
+      + '<ul class="lista-tripulacion">' + J.resumenRoles.map(r => '<li style="display:block"><b>' + M.esc(r.nombre) + ':</b> ' + M.esc(r.texto) + '</li>').join('') + '</ul></section>'
       + '<div class="campo"><span>Su rol (está en su escarapela)</span><div class="opciones">' + opRoles + '</div></div>'
       + '<label class="casilla"><input type="checkbox" id="autoriza"><span>' + M.esc(textoAutorizacion()) + '</span></label>'
       + '<p class="error" id="err">' + M.esc(err || '') + '</p>'

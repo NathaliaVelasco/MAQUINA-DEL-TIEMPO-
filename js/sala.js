@@ -114,6 +114,7 @@
       + J.bienvenida.map(p => '<p class="texto-guardian">' + M.esc(p) + '</p>').join('')
       + '<div class="acciones"><button class="btn contorno" data-a="escucharBienvenida">▶ ESCUCHAR AL GUARDIÁN</button></div></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Reglas del laberinto</p><ul class="lista-tripulacion">' + J.reglas.map(r => '<li><span>' + M.esc(r) + '</span></li>').join('') + '</ul></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">Roles de la misión</p><ul class="lista-tripulacion">' + J.resumenRoles.map(r => '<li style="display:block"><b>' + M.esc(r.nombre) + ':</b> ' + M.esc(r.texto) + '</li>').join('') + '</ul></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + ' (' + t.length + '/7)</p><ul class="lista-tripulacion">' + lista + '</ul>'
       + '<p class="suave" style="font-size:13px;margin-top:10px">Los integrantes se registran desde el Pórtico de Entrada en su propio celular.</p>'
       + '<div class="acciones"><button class="btn fantasma pequeno" data-a="actualizar">Actualizar tripulación</button></div></section>'

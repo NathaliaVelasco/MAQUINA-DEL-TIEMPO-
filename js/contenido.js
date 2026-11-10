@@ -37,6 +37,13 @@ window.CONTENIDO = {
                     mision: ['Inspeccionar minuciosamente el material táctico en las mesas.', 'Descifrar acertijos y analizar los casos clínicos.', 'Ejecutar las maniobras prácticas y el ensamblaje.'] }
     },
 
+    resumenRoles: [
+      { nombre: 'Líder Piloto de Vuelo (1)', texto: 'Encargado de coordinar al equipo, tomar las decisiones de consenso clínico y marcar el ritmo de tiempo en las estaciones.' },
+      { nombre: 'Copiloto · Custodio del Registro Manual (1)', texto: 'Encargado de llevar el cuaderno de campo y tomar nota de las pistas, variables clínicas y deducciones en la bitácora física del grupo.' },
+      { nombre: 'Comandante de Misión · Custodio Digital (1)', texto: 'Encargado de portar y digitar los códigos de validación, claves numéricas y resultados en el ecosistema.' },
+      { nombre: 'Tripulantes de Élite (4)', texto: 'Especialistas activos encargados de inspeccionar el material de las mesas, descifrar candados, analizar los casos y ejecutar el ensamblaje hands-on.' }
+    ],
+
     autorizacion: 'Autorizo el tratamiento de mi nombre completo y mi profesión únicamente para registrar mi participación en esta experiencia académica, conforme a la Ley 1581 de 2012 de protección de datos personales. No se solicitan otros datos.',
 
     bienvenida: [
