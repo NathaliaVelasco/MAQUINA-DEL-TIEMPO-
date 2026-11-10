@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#000000">
+  <meta name="author" content="Nathalia Velasco · Simoné">
+  <title>Instructivo del Guía Especialista · Máquina del Tiempo</title>
+  <link rel="icon" href="img/solventum-logo.png">
+  <link rel="stylesheet" href="css/fuentes.css">
+  <style>
+    :root {
+      --malachite: #05dd4d; --malachite-suave: #7cf0a0; --teal: #01332b; --teal-2: #024537;
+      --negro: #000; --blanco: #f4f8f6; --gris: #a7b8b2; --gris-2: #6d817b;
+      --linea: rgba(5, 221, 77, .24); --linea-suave: rgba(167, 184, 178, .18); --alarma: #ff5a52;
+      --display: 'Orbitron', 'Montserrat', system-ui, sans-serif;
+      --cuerpo: 'Montserrat', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--negro); -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 120px; }
+    body { margin: 0; min-height: 100vh; color: var(--blanco); font: 400 16px/1.6 var(--cuerpo);
+      background: radial-gradient(900px 600px at 50% 0%, rgba(1, 51, 43, .55), transparent 70%), var(--negro); }
+    a { color: var(--malachite); }
+    button { font: inherit; cursor: pointer; }
+
+    /* ---------- acceso ---------- */
+    .acceso { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+    .acceso .tarjeta { width: 100%; max-width: 420px; text-align: center; }
+    .logo { display: block; height: auto; }
+    .acceso .logo { width: 190px; margin: 0 auto 28px; }
+    .sobretitulo { font: 700 11px/1.3 var(--display); letter-spacing: .22em; text-transform: uppercase; color: var(--malachite); }
+    .acceso h1 { font: 700 clamp(20px, 6vw, 26px)/1.25 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 10px 0 8px; }
+    .acceso p { color: var(--gris); font-size: 14px; margin: 0 0 22px; }
+    .acceso input { width: 100%; background: rgba(0, 0, 0, .65); border: 1px solid var(--linea); border-radius: 10px; padding: 15px;
+      color: var(--blanco); font: 600 18px var(--mono); letter-spacing: .12em; text-align: center; text-transform: uppercase; }
+    .acceso input:focus { outline: none; border-color: var(--malachite); box-shadow: 0 0 0 3px rgba(5, 221, 77, .2); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 10px;
+      padding: 13px 20px; min-height: 50px; font: 700 12px/1.2 var(--display); letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
+    .btn.primario { width: 100%; margin-top: 14px; background: var(--malachite); color: var(--teal); box-shadow: 0 8px 26px rgba(5, 221, 77, .3); }
+    .btn.fantasma { background: rgba(0, 0, 0, .55); border-color: var(--linea-suave); color: var(--gris); min-height: 40px; padding: 9px 14px; font-size: 10px; }
+    .error { color: var(--alarma); min-height: 22px; font-size: 14px; font-weight: 600; margin-top: 10px; }
+    .pie-acceso { margin-top: 34px; font-size: 11px; color: var(--gris-2); letter-spacing: .04em; }
+
+    /* ---------- cabecera ---------- */
+    .cabecera { position: sticky; top: 0; z-index: 10; background: rgba(0, 0, 0, .92); border-bottom: 1px solid var(--linea); backdrop-filter: blur(8px); }
+    .cabecera .fila { max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 10px 16px; }
+    .cabecera .logo { width: 112px; flex: none; }
+    .cabecera .titulo { flex: 1; min-width: 0; }
+    .cabecera .titulo b { display: block; font: 700 11px/1.3 var(--display); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cabecera .titulo small { display: block; font: 600 10px var(--display); letter-spacing: .14em; color: var(--malachite); text-transform: uppercase; }
+    nav.indice { max-width: 980px; margin: 0 auto; display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
+    nav.indice::-webkit-scrollbar { display: none; }
+    nav.indice a { flex: none; text-decoration: none; font: 700 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--gris);
+      padding: 8px 10px; border: 1px solid var(--linea-suave); border-radius: 999px; background: rgba(0, 0, 0, .5); }
+    nav.indice a.activo { color: var(--teal); background: var(--malachite); border-color: var(--malachite); }
+
+    /* ---------- contenido ---------- */
+    main { max-width: 980px; margin: 0 auto; padding: 28px 16px 60px; }
+    .portada { text-align: center; padding: 18px 0 30px; }
+    .portada h1 { font: 900 clamp(24px, 7vw, 40px)/1.15 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 10px 0 12px; }
+    .portada p { color: var(--gris); margin: 0 auto; max-width: 560px; font-size: 15px; }
+    section.bloque { position: relative; margin: 0 0 22px; padding: 26px 22px 22px; border: 1px solid var(--linea); border-radius: 14px;
+      background: linear-gradient(180deg, rgba(1, 51, 43, .6), rgba(2, 14, 11, .92)); }
+    section.bloque::before { content: ''; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); width: 96px; height: 3px; border-radius: 2px;
+      background: var(--malachite); box-shadow: 0 0 18px rgba(5, 221, 77, .45); }
+    h2 { font: 700 clamp(18px, 4.6vw, 24px)/1.25 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--malachite); margin: 0 0 14px; }
+    h3 { font: 700 14px/1.35 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--blanco); margin: 26px 0 10px;
+      padding-top: 18px; border-top: 1px solid var(--linea-suave); }
+    p { margin: 0 0 12px; }
+    strong { color: #fff; font-weight: 700; }
+    ul, ol { margin: 0 0 14px; padding-left: 22px; }
+    li { margin: 0 0 7px; }
+    li > ul, li > ol { margin-top: 7px; }
+    blockquote { margin: 14px 0; padding: 14px 16px; border-left: 3px solid var(--malachite); border-radius: 0 10px 10px 0;
+      background: rgba(5, 221, 77, .07); color: #e3efe9; font-style: italic; }
+    blockquote p:last-child { margin: 0; }
+    blockquote strong { font-style: normal; }
+    .tabla { overflow-x: auto; margin: 0 0 16px; border: 1px solid var(--linea-suave); border-radius: 10px; }
+    table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+    th { font: 700 10px/1.3 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--malachite); text-align: left; background: rgba(0, 0, 0, .45); }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--linea-suave); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    @media (max-width: 680px) {
+      .tabla { border: 0; overflow: visible; }
+      table, thead, tbody, tr, td { display: block; min-width: 0; width: 100%; }
+      thead, colgroup { display: none; }
+      tr { border: 1px solid var(--linea-suave); border-radius: 10px; margin: 0 0 10px; background: rgba(0, 0, 0, .35); padding: 6px 0; }
+      td { border: 0; padding: 6px 14px; }
+      td::before { content: attr(data-label); display: block; font: 700 9px/1.4 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--gris-2); }
+    }
+    td strong { font: 600 20px/1 var(--mono); color: var(--malachite); letter-spacing: .08em; white-space: nowrap; }
+
+    /* checklist */
+    ul.task-list { list-style: none; padding-left: 0; }
+    ul.task-list li { display: flex; gap: 12px; align-items: flex-start; padding: 9px 10px; margin: 0 0 6px; border: 1px solid var(--linea-suave); border-radius: 8px; background: rgba(0, 0, 0, .35); }
+    ul.task-list label { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; width: 100%; }
+    ul.task-list input { width: 20px; height: 20px; flex: none; margin: 2px 0 0; accent-color: var(--malachite); }
+    ul.task-list li.hecho { opacity: .55; }
+    .acciones-lista { display: flex; justify-content: flex-end; margin: -4px 0 14px; }
+
+    .pie { margin-top: 30px; text-align: center; font-size: 12px; color: var(--gris-2); }
+    .pie .logo { width: 120px; margin: 0 auto 12px; opacity: .8; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 560px) {
+      section.bloque { padding: 22px 16px 18px; }
+      .cabecera .logo { width: 92px; }
+      .cabecera .btn.fantasma { display: none; }
+    }
+    @media print {
+      html, body { background: #fff; color: #000; }
+      .cabecera, .acciones-lista, .acceso { display: none !important; }
+      section.bloque { background: none; border-color: #999; break-inside: auto; }
+      section.bloque::before { display: none; }
+      h2, th, td strong, a { color: #01332b; }
+      strong, h3 { color: #000; }
+      blockquote { background: #eef7f1; color: #000; }
+      .pie .logo { filter: invert(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="acceso" id="acceso">
+    <form class="tarjeta" id="form-acceso" autocomplete="off">
+      <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
+      <div class="sobretitulo">Máquina del Tiempo · Uso interno</div>
+      <h1>Instructivo del Guía Especialista</h1>
+      <p>Este instructivo contiene las claves y respuestas del juego. Ingresa la clave de acceso que te entregó la coordinación.</p>
+      <label for="clave" class="sobretitulo" style="display:block;margin-bottom:8px">Clave de acceso</label>
+      <input id="clave" name="clave" type="password" inputmode="text" autocapitalize="characters" spellcheck="false" required>
+      <button class="btn primario" type="submit" id="btn-abrir">Abrir instructivo</button>
+      <div class="error" id="error" role="alert"></div>
+      <div class="pie-acceso">Metodología y diseño: Nathalia Velasco · Simoné</div>
+    </form>
+  </div>
+
+  <div id="documento" hidden>
+    <header class="cabecera">
+      <div class="fila">
+        <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
+        <div class="titulo"><b>Instructivo del Guía Especialista</b><small>Máquina del Tiempo</small></div>
+        <button class="btn fantasma" type="button" onclick="window.print()">Imprimir</button>
+        <button class="btn fantasma" type="button" id="btn-salir">Cerrar</button>
+      </div>
+      <nav class="indice" id="indice" aria-label="Secciones"></nav>
+    </header>
+    <main>
+      <div class="portada">
+        <div class="sobretitulo">Maleta Máquina del Tiempo · Código Cirugía del Futuro</div>
+        <h1>Instructivo del Guía Especialista</h1>
+        <p>Orden de operación, claves de los baúles, respuestas, pistas y retroalimentación de las 5 estaciones. Actualizado: __FECHA__.</p>
+      </div>
+      <div id="contenido"></div>
+      <div class="pie">
+        <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
+        Metodología, diseño del juego y piezas físicas: Nathalia Velasco · Simoné. Documento confidencial para Guías Especialistas.
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function () {
+    var CIFRADO = __PAYLOAD__;
+    var NOMBRES = { rol: 'Rol', claves: 'Claves', maleta: 'Maleta', montaje: 'Montaje', e1: 'Estación 1', e2: 'Estación 2', e3: 'Estación 3',
+      e4: 'Estación 4', e5: 'Estación 5', reinicio: 'Reinicio', imprevistos: 'Imprevistos' };
+    var LLAVE_SESION = 'mdt-instructivo-clave', LLAVE_LISTA = 'mdt-instructivo-lista';
+
+    function leer(store, k) { try { return window[store].getItem(k); } catch (e) { return null; } }
+    function guardar(store, k, v) { try { window[store].setItem(k, v); } catch (e) {} }
+    function borrar(store, k) { try { window[store].removeItem(k); } catch (e) {} }
+    function bytes(b64) { var s = atob(b64), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+    function normalizar(c) { return (c || '').trim().toUpperCase().replace(/\s+/g, ''); }
+
+    async function descifrar(clave) {
+      var enc = new TextEncoder();
+      var base = await crypto.subtle.importKey('raw', enc.encode(clave), 'PBKDF2', false, ['deriveKey']);
+      var llave = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(CIFRADO.sal), iterations: CIFRADO.iteraciones, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(CIFRADO.iv) }, llave, bytes(CIFRADO.datos));
+      return new TextDecoder().decode(claro);
+    }
+
+    function montar(html) {
+      var cont = document.getElementById('contenido');
+      var tmp = document.createElement('div'); tmp.innerHTML = html;
+      var seccion = null, indice = document.getElementById('indice');
+      Array.prototype.slice.call(tmp.childNodes).forEach(function (n) {
+        if (n.nodeType === 1 && n.tagName === 'H2') {
+          seccion = document.createElement('section'); seccion.className = 'bloque'; seccion.id = n.id; n.removeAttribute('id');
+          cont.appendChild(seccion);
+          var a = document.createElement('a'); a.href = '#' + seccion.id; a.textContent = NOMBRES[seccion.id] || n.textContent; indice.appendChild(a);
+        }
+        (seccion || cont).appendChild(n);
+      });
+      cont.querySelectorAll('colgroup').forEach(function (c) { c.remove(); });
+      cont.querySelectorAll('table').forEach(function (t) {
+        var cab = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) { return th.textContent; });
+        t.querySelectorAll('tbody tr').forEach(function (tr) { Array.prototype.forEach.call(tr.children, function (td, i) { td.setAttribute('data-label', cab[i] || ''); }); });
+      });
+      cont.querySelectorAll('table').forEach(function (t) { var w = document.createElement('div'); w.className = 'tabla'; t.parentNode.insertBefore(w, t); w.appendChild(t); });
+      cont.querySelectorAll('a[href^="http"]').forEach(function (a) { a.target = '_blank'; a.rel = 'noopener'; });
+
+      // checklist de la maleta (se recuerda en este dispositivo)
+      var marcas = {}; try { marcas = JSON.parse(leer('localStorage', LLAVE_LISTA) || '{}'); } catch (e) {}
+      var cajas = cont.querySelectorAll('ul.task-list input[type=checkbox]');
+      cajas.forEach(function (c, i) {
+        c.disabled = false; c.checked = !!marcas[i]; c.closest('li').classList.toggle('hecho', c.checked);
+        c.addEventListener('change', function () { marcas[i] = c.checked; c.closest('li').classList.toggle('hecho', c.checked); guardar('localStorage', LLAVE_LISTA, JSON.stringify(marcas)); });
+      });
+      var maleta = document.getElementById('maleta');
+      if (maleta && cajas.length) {
+        var barra = document.createElement('div'); barra.className = 'acciones-lista';
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'btn fantasma'; b.textContent = 'Desmarcar toda la lista';
+        b.onclick = function () { marcas = {}; borrar('localStorage', LLAVE_LISTA); cajas.forEach(function (c) { c.checked = false; c.closest('li').classList.remove('hecho'); }); };
+        barra.appendChild(b); maleta.insertBefore(barra, maleta.children[2] || null);
+      }
+
+      // índice activo según la sección visible
+      var enlaces = indice.querySelectorAll('a');
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (ents) {
+          ents.forEach(function (e) { if (e.isIntersecting) enlaces.forEach(function (a) {
+            var on = a.getAttribute('href') === '#' + e.target.id; a.classList.toggle('activo', on);
+            if (on && a.scrollIntoView) indice.scrollLeft = a.offsetLeft - 16; }); });
+        }, { rootMargin: '-130px 0px -60% 0px' });
+        cont.querySelectorAll('section.bloque').forEach(function (s) { obs.observe(s); });
+      }
+      document.getElementById('acceso').hidden = true;
+      document.getElementById('documento').hidden = false;
+      if (location.hash) { var d = document.getElementById(location.hash.slice(1)); if (d) d.scrollIntoView(); }
+    }
+
+    async function intentar(clave, silencioso) {
+      var err = document.getElementById('error'), btn = document.getElementById('btn-abrir');
+      err.textContent = ''; btn.disabled = true; btn.textContent = 'Verificando…';
+      try { montar(await descifrar(clave)); guardar('sessionStorage', LLAVE_SESION, clave); }
+      catch (e) { if (!silencioso) err.textContent = 'Clave incorrecta. Revísala e inténtalo de nuevo.'; borrar('sessionStorage', LLAVE_SESION); }
+      btn.disabled = false; btn.textContent = 'Abrir instructivo';
+    }
+
+    document.getElementById('form-acceso').addEventListener('submit', function (ev) { ev.preventDefault(); intentar(normalizar(document.getElementById('clave').value)); });
+    document.getElementById('btn-salir').addEventListener('click', function () { borrar('sessionStorage', LLAVE_SESION); location.replace(location.pathname); });
+    var previa = leer('sessionStorage', LLAVE_SESION); if (previa) intentar(previa, true);
+  })();
+  </script>
+</body>
+</html>
