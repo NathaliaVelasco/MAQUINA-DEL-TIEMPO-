@@ -6,9 +6,9 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#000000">
   <meta name="author" content="Nathalia Velasco · Simoné">
-  <title>Instructivo del Guía Especialista · Máquina del Tiempo</title>
-  <link rel="icon" href="img/solventum-logo.png">
-  <link rel="stylesheet" href="css/fuentes.css">
+  <title>Instructivo Maleta · Máquina del Tiempo</title>
+  <link rel="icon" href="../img/solventum-logo.png">
+  <link rel="stylesheet" href="../css/fuentes.css">
   <style>
     :root {
       --malachite: #05dd4d; --malachite-suave: #7cf0a0; --teal: #01332b; --teal-2: #024537;
@@ -123,8 +123,8 @@
 <body>
   <div class="acceso" id="acceso">
     <form class="tarjeta" id="form-acceso" autocomplete="off">
-      <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
-      <div class="sobretitulo">Máquina del Tiempo · Uso interno</div>
+      <img class="logo" src="../img/solventum-logo.png" alt="Solventum" width="487" height="123">
+      <div class="sobretitulo">Máquina del Tiempo · Maleta didáctica</div>
       <h1>Instructivo del Guía Especialista</h1>
       <p>Este instructivo contiene las claves y respuestas del juego. Ingresa la clave de acceso que te entregó la coordinación.</p>
       <label for="clave" class="sobretitulo" style="display:block;margin-bottom:8px">Clave de acceso</label>
@@ -138,8 +138,8 @@
   <div id="documento" hidden>
     <header class="cabecera">
       <div class="fila">
-        <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
-        <div class="titulo"><b>Instructivo del Guía Especialista</b><small>Máquina del Tiempo</small></div>
+        <img class="logo" src="../img/solventum-logo.png" alt="Solventum" width="487" height="123">
+        <div class="titulo"><b>Instructivo del Guía Especialista</b><small>Maleta didáctica</small></div>
         <button class="btn fantasma" type="button" onclick="window.print()">Imprimir</button>
         <button class="btn fantasma" type="button" id="btn-salir">Cerrar</button>
       </div>
@@ -149,11 +149,11 @@
       <div class="portada">
         <div class="sobretitulo">Maleta Máquina del Tiempo · Código Cirugía del Futuro</div>
         <h1>Instructivo del Guía Especialista</h1>
-        <p>Orden de operación, claves de los baúles, respuestas, pistas y retroalimentación de las 5 estaciones. Actualizado: __FECHA__.</p>
+        <p>Uso de la maleta didáctica: montaje, claves de los baúles, respuestas, pistas y retroalimentación de las 5 estaciones. Actualizado: __FECHA__.</p>
       </div>
       <div id="contenido"></div>
       <div class="pie">
-        <img class="logo" src="img/solventum-logo.png" alt="Solventum" width="487" height="123">
+        <img class="logo" src="../img/solventum-logo.png" alt="Solventum" width="487" height="123">
         Metodología, diseño del juego y piezas físicas: Nathalia Velasco · Simoné. Documento confidencial para Guías Especialistas.
       </div>
     </main>
@@ -162,7 +162,7 @@
   <script>
   (function () {
     var CIFRADO = __PAYLOAD__;
-    var NOMBRES = { rol: 'Rol', claves: 'Claves', maleta: 'Maleta', montaje: 'Montaje', modos: 'Con consola', e1: 'Estación 1', e2: 'Estación 2', e3: 'Estación 3',
+    var NOMBRES = { rol: 'Rol', claves: 'Claves', maleta: 'Maleta', montaje: 'Montaje', e1: 'Estación 1', e2: 'Estación 2', e3: 'Estación 3',
       e4: 'Estación 4', e5: 'Estación 5', reinicio: 'Reinicio', imprevistos: 'Imprevistos' };
     var LLAVE_SESION = 'mdt-instructivo-clave', LLAVE_LISTA = 'mdt-instructivo-lista';
 

@@ -14,7 +14,7 @@
     + '<a href="tablero.html"><div class="hud"><b>El Gran Tablero</b><span>Pantalla grande: resultados de los 4 grupos en vivo.</span></div></a>'
     + '<a href="bitacora.html"><div class="hud"><b>Bitácora de Tránsito Temporal</b><span>Expectativa (3 días antes): 4 fases y 20 puntos del consenso para completar.</span></div></a>'
     + '<a href="memoria-de-la-ruta.html"><div class="hud"><b>Memoria de la Ruta</b><span>5 paradas: las postales en digital, del minuto cero a la reconstrucción.</span></div></a>'
-    + '<a href="instructivo-guia.html"><div class="hud"><b>Instructivo del Guía Especialista</b><span>Con clave de acceso: montaje, claves, guion, pistas y reinicio de la maleta.</span></div></a>'
+    + '<a href="Instructivo-Maleta/"><div class="hud"><b>Instructivo Maleta</b><span>Con clave de acceso: montaje, claves, guion, pistas y reinicio de la maleta.</span></div></a>'
     + '<a href="guia.html"><div class="hud"><b>Guía Especialista</b><span>Administrador del juego (con PIN): códigos de acceso, QR, grupos, nueva sesión y resultados.</span></div></a>'
     + '</nav>'
     + '<p class="suave centro" style="margin-top:24px;font-size:13px">Metodología y diseño del juego: Nathalia Velasco · Simoné</p>'
