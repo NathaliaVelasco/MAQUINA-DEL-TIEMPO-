@@ -315,6 +315,7 @@
           : 'Tu Comandante de Misión entrará a la Sala de Escape y digitará los códigos. Mientras tanto, mira quién más está participando.') + '</p>'
       + '<div class="acciones"><button class="btn primario ancho" id="verGrupos">VER LOS 4 GRUPOS Y SUS INTEGRANTES →</button></div></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
+      + '<div class="acciones"><a class="btn primario ancho grande" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">INGRESA A LA SALA DE ESCAPE →</a></div>'
       + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button></div>'
       + '</main>');
     document.getElementById('verGrupos').onclick = () => { clearInterval(sondeo); pGrupos(); };
