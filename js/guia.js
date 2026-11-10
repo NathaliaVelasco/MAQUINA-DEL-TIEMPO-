@@ -49,7 +49,9 @@
     };
   }
 
-  async function cargar() { P = await admin('panel'); M.sincronizar(P.ahora); render(); }
+  let ocupada = null;   // grupo que tiene la Sala de Escape ahora (null = libre)
+  async function cargarOcupacion() { try { ocupada = (await M.rpc('mdt_ocupacion', { p_pin: pin, p_liberar: false })).ocupada_por; } catch (e) {} }
+  async function cargar() { P = await admin('panel'); await cargarOcupacion(); M.sincronizar(P.ahora); render(); }
   function iniciarSondeo() {
     clearInterval(sondeo);
     sondeo = setInterval(async () => {
@@ -104,6 +106,9 @@
 
       /* 1. Claves */
       + '<section class="hud bloque"><p class="sobretitulo">1 · Códigos de la sesión n.º ' + P.sesion + '</p>'
+      + '<p class="suave" style="margin:0 0 10px">Sala de Escape: ' + (ocupada
+          ? '<b>ocupada por ' + M.esc(M.grupo(ocupada).nombre) + '</b> <button class="btn contorno pequeno" data-a="liberar-sala">LIBERAR SALA</button>'
+          : '<b>libre</b>') + '</p>'
       + '<div class="claves-admin">'
       + '<div class="clave-caja"><small>Código de registro · Pórtico de Entrada</small><div class="clave-grande">' + M.esc(P.codigo_acceso) + '</div>'
       + '<p class="suave" style="font-size:13px">Lo usan los 7 integrantes de cada grupo para registrarse.</p>'
@@ -191,6 +196,7 @@
     const b = ev.target.closest('[data-a]'); if (!b) return;
     const a = b.dataset.a, g = b.dataset.g;
     try {
+      if (a === 'liberar-sala') { if (!confirmado('liberar-sala')) return; await M.rpc('mdt_ocupacion', { p_pin: pin, p_liberar: true }); aviso('Sala de Escape liberada. Ya puede entrar otro grupo.'); return cargar(); }
       if (a === 'salir') { pin = ''; try { sessionStorage.removeItem('mdt-pin'); } catch (e) {} return pIngreso(); }
       if (a === 'generar') {
         const t = b.dataset.t, c = codigoAleatorio(t);

@@ -53,6 +53,11 @@
   async function cargar() {
     try { await refrescar(); pantalla = decidirPantalla(); render(); }
     catch (e) {
+      if (/SALA_OCUPADA:/.test(e.message)) {
+        const otro = M.grupo(e.message.split('SALA_OCUPADA:')[1].trim()).nombre;
+        pantalla = 'acceso';
+        return pAcceso('La Sala de Escape está ocupada por ' + otro + '. Espere a que ese grupo termine o pida al Guía Especialista que libere la sala.');
+      }
       if (/incorrecto|tripulación registrada/i.test(e.message)) { pantalla = 'acceso'; return pAcceso(M.mensajeError(e)); }
       pinta(cab() + '<main class="pagina"><section class="hud"><p class="error">' + M.esc(M.mensajeError(e)) + '</p><div class="acciones"><button class="btn primario" data-a="reintentar">REINTENTAR</button></div></section></main>');
     }
@@ -86,7 +91,16 @@
       if (!cfg.codigo) return pAcceso('Escriba el código de la Sala de Escape.');
       if (!cfg.grupo) return pAcceso('Elijan su grupo.');
       M.audio(); M.decir('Acceso concedido.');   // primer gesto: habilita audio y voz en el celular
-      guardarCfg(); cargar();
+      guardarCfg();
+      M.rpc('mdt_entrar_sala', { p_codigo: cfg.codigo, p_grupo: cfg.grupo })
+        .then(() => cargar())
+        .catch(e => {
+          if (/SALA_OCUPADA:/.test(e.message)) {
+            const otro = M.grupo(e.message.split('SALA_OCUPADA:')[1].trim()).nombre;
+            return pAcceso('La Sala de Escape está ocupada por ' + otro + '. Espere a que ese grupo termine o pida al Guía Especialista que libere la sala.');
+          }
+          pAcceso(M.mensajeError(e));
+        });
     };
   }
 
