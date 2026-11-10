@@ -314,7 +314,7 @@
           ? 'Ahora entra a la Sala de Escape con el botón de arriba y digita los códigos de tu grupo.'
           : 'Tu Comandante de Misión entrará a la Sala de Escape y digitará los códigos. Mientras tanto, mira quién más está participando.') + '</p>'
       + '<div class="acciones"><button class="btn primario ancho" id="verGrupos">VER LOS 4 GRUPOS Y SUS INTEGRANTES →</button></div></section>'
-      + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><div id="anuncio-completo"></div><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
       + '<div class="acciones"><a class="btn primario ancho grande" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">INGRESA A LA SALA DE ESCAPE →</a></div>'
       + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button></div>'
       + '</main>');
@@ -326,6 +326,14 @@
       pFormulario();
     };
     tripulacion(); clearInterval(sondeo); sondeo = setInterval(tripulacion, 5000);
+  }
+  /* Anuncio único cuando un grupo llena sus 7 tripulantes (en pantalla y con voz). */
+  const avisados = {};
+  function anunciarCompleto(grupoId, nombre) {
+    if (avisados[grupoId]) return;
+    avisados[grupoId] = true;
+    M.SFX.portal && M.SFX.portal();
+    M.decir('¡Grupo completo! ' + nombre + ' tiene sus siete tripulantes registrados.');
   }
   /* Vista de todos los grupos: quién está registrado y participando. */
   async function pGrupos() {
@@ -348,6 +356,7 @@
         let filas = t.map(x => '<li><span>' + M.esc(x.nombre) + '</span><span>' + M.esc(M.rol(x.rol).nombre) + '</span></li>').join('');
         for (let i = t.length; i < 7; i++) filas += '<li class="vacio"><span>Esperando tripulante…</span><span></span></li>';
         const estado = t.length >= 7 ? 'Grupo completo' : (t.length ? t.length + ' de 7 registrados' : 'Sin registros');
+        if (t.length >= 7) anunciarCompleto(g.id, g.nombre);
         return '<section class="hud bloque"><span class="chip-grupo" style="--g:' + g.color + '"><i></i>' + M.esc(g.nombre) + '</span>'
           + (propio ? ' <small class="suave">(tu grupo)</small>' : '')
           + '<p class="suave" style="font-size:13px;margin:6px 0 0">' + estado + '</p>'
@@ -366,6 +375,9 @@
       let html = t.map(x => '<li><span>' + M.esc(x.nombre) + '</span><span>' + M.esc(M.rol(x.rol).nombre) + '</span></li>').join('');
       for (let i = t.length; i < 7; i++) html += '<li class="vacio"><span>Esperando tripulante…</span><span></span></li>';
       ul.innerHTML = html;
+      const ac = document.getElementById('anuncio-completo');
+      if (ac) ac.innerHTML = t.length >= 7 ? '<p class="anuncio-completo">¡Grupo completo! Los 7 tripulantes están registrados.</p>' : '';
+      if (t.length >= 7) anunciarCompleto(registro.grupo, M.grupo(registro.grupo).nombre);
     } catch (e) { if (errorDeSesion(e)) return; ul.innerHTML = '<li class="vacio">' + M.esc(M.mensajeError(e)) + '</li>'; }
     // Diagnóstico: avisa cuando se abre el final (el grupo cerró la Estación 5).
     try {
