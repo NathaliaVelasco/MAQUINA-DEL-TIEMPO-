@@ -45,7 +45,8 @@
     ['4', 'Estación 3', 'El Taller del Cronógrafo'],
     ['5', 'Estación 4', 'El Vínculo de Vigilancia'],
     ['6', 'Estación 5', 'El Salto Temporal'],
-    ['7', 'Cierre · El Gran Tablero', 'Puntaje total y grupo ganador'],
+    ['7', 'Estación 6 · Cierre', 'Resumen de puntos por estación y por tiempo; productos AbThera™ y Prevena™'],
+    ['8', 'Cierre · El Gran Tablero', 'Puntaje total y grupo ganador'],
     ['T+1', 'Memoria de la Ruta', '5 paradas: las postales, después de la experiencia']
   ];
 
