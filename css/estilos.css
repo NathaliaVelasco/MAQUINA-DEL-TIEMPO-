@@ -512,3 +512,18 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 .producto h3 { font: 700 26px var(--display); margin: 4px 0 8px; color: var(--malachite); }
 .producto p { font-size: 14px; margin: 6px 0; }
 @media (max-width: 720px) { .productos { grid-template-columns: 1fr; } }
+
+/* Portada */
+.portada-hero { text-align: center; padding: 28px 0 8px; }
+.portada-hero .titulo-juego { font-size: clamp(34px, 7vw, 64px); }
+.portada-intro { max-width: 620px; margin: 14px auto 0; color: var(--gris); }
+.portada-ruta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 22px; }
+.portada-ruta .hud b { display: block; font: 700 16px var(--display); text-transform: uppercase; color: var(--malachite); margin: 6px 0; }
+.portada-ruta .hud span { color: var(--gris); font-size: 14px; }
+.portada-accesos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+.portada-tarjeta { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; transition: transform .15s; }
+.portada-tarjeta:hover { transform: translateY(-2px); }
+.portada-tarjeta b { font: 700 18px var(--display); text-transform: uppercase; color: var(--malachite); }
+.portada-tarjeta span { color: var(--gris); font-size: 14px; }
+.portada-tarjeta em { font-style: normal; font: 700 12px var(--display); letter-spacing: .08em; color: var(--blanco); margin-top: auto; }
+@media (max-width: 720px) { .portada-ruta, .portada-accesos { grid-template-columns: 1fr; } }
