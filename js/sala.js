@@ -464,12 +464,42 @@
   }
 
   /* ------------------------------------------------------------ 6. final */
+  const PRODUCTOS = [
+    { nombre: 'AbThera™', marca: 'Solventum™ AbThera™', tipo: 'Cierre abdominal temporal (TAC) con terapia de presión negativa',
+      cuando: 'Abdomen abierto: control de daños, sepsis severa o síndrome compartimental.',
+      dif: ['Control de fluidos: retira exudado, fluidos y material infeccioso de la cavidad peritoneal y de los surcos paracólicos.',
+            'Reduce el edema visceral tras la reanimación con grandes volúmenes de líquidos.',
+            'Tensión medial: acerca los bordes de la fascia para facilitar el cierre primario.',
+            'Protege las vísceras y evita que se adhieran a la pared abdominal.',
+            'Facilita las reentradas quirúrgicas programadas.'] },
+    { nombre: 'Prevena™', marca: 'Solventum™ Prevena™', tipo: 'Terapia portátil de presión negativa para incisiones cerradas (ciNPT)',
+      cuando: 'Incisión cerrada en pacientes de riesgo, durante el posoperatorio. Presión continua de −125 mmHg.',
+      dif: ['Barrera protectora: aísla la incisión de contaminantes externos.',
+            'Soporte mecánico: reduce las fuerzas de tensión lateral en los bordes de la herida.',
+            'Control de fluidos: retira líquidos de forma continua y reduce el edema.',
+            'Según Solventum, frente a apósitos convencionales: −47 % infecciones del sitio quirúrgico, −46 % complicaciones de la herida, −36 % reoperaciones y −23 % readmisiones.'] }
+  ];
+
   async function pFinal() {
-    const filas = E.estaciones.map(x => '<tr class="' + (x.estado === 'agotada' ? 'mal' : '') + '"><td>Estación ' + x.numero + ' · ' + M.esc(contenido(x.id).nombre) + '</td><td>' + x.total + ' / 20</td></tr>').join('');
+    const cerradas = E.estaciones.filter(x => x.estado === 'cerrada');
+    const sumaCod = E.estaciones.reduce((s, x) => s + (x.pts_codigos || 0), 0);
+    const sumaTie = E.estaciones.reduce((s, x) => s + (x.pts_tiempo || 0), 0);
+    const segTotal = cerradas.reduce((s, x) => s + (x.seg_usados || 0), 0);
+    const filas = E.estaciones.map(x => '<tr class="' + (x.estado === 'agotada' ? 'mal' : '') + '"><td>Estación ' + x.numero + ' · ' + M.esc(contenido(x.id).nombre) + '</td>'
+      + '<td>' + (x.estado === 'agotada' ? 0 : (x.pts_codigos || 0)) + ' / 14</td>'
+      + '<td>' + (x.estado === 'agotada' ? 0 : (x.pts_tiempo || 0)) + ' · ' + M.mmss(x.seg_usados || 0) + '</td>'
+      + '<td><b>' + (x.estado === 'agotada' ? 0 : x.total) + ' / 20</b></td></tr>').join('');
+    const productos = PRODUCTOS.map(p => '<article class="producto hud">'
+      + '<p class="sobretitulo">' + M.esc(p.marca) + '</p><h3>' + M.esc(p.nombre) + '</h3>'
+      + '<p><b>Qué es:</b> ' + M.esc(p.tipo) + '.</p><p><b>Cuándo se usa:</b> ' + M.esc(p.cuando) + '</p>'
+      + '<ul class="lista-demo">' + p.dif.map(d => '<li>' + M.esc(d) + '</li>').join('') + '</ul></article>').join('');
     pinta(cab('Misión cumplida') + '<main class="pagina">'
-      + '<section class="hud desbloqueo"><p class="sobretitulo">Fin de la línea de tiempo</p><h2>' + M.esc(J.final.mensaje) + '</h2><p>' + M.esc(J.final.detalle) + '</p>'
+      + '<section class="hud desbloqueo"><p class="sobretitulo">Estación 6 · Cierre de la línea de tiempo</p><h2>' + M.esc(J.final.mensaje) + '</h2><p>' + M.esc(J.final.detalle) + '</p>'
       + '<div class="marcador"><b>' + E.total + '</b><span>/ 100</span></div><p id="puesto" class="sobretitulo centro" style="margin-top:6px"></p>'
-      + '<table class="tabla-puntos"><tbody>' + filas + '</tbody></table></section>'
+      + '<table class="tabla-puntos"><thead><tr><th>Estación</th><th>Respuestas</th><th>Agilidad · tiempo</th><th>Total</th></tr></thead><tbody>' + filas
+      + '<tr><td><b>Total</b></td><td><b>' + sumaCod + ' / 70</b></td><td><b>' + sumaTie + ' pts · ' + M.mmss(segTotal) + '</b></td><td><b>' + E.total + ' / 100</b></td></tr></tbody></table>'
+      + '<p class="suave" style="font-size:13px;margin-top:10px">Agilidad: puntos según el tiempo de cada estación. Tiempo total de las estaciones resueltas: ' + M.mmss(segTotal) + '.</p></section>'
+      + '<section class="hud bloque"><p class="sobretitulo">Los productos protagonistas</p><div class="productos">' + productos + '</div></section>'
       + '<section class="hud bloque" id="guardian">' + guardian('El Guardián de la Línea del Tiempo') + '<p class="frase-cierre">' + M.esc(J.final.frase) + '</p>'
       + '<div class="acciones"><button class="btn contorno" data-a="escucharFinal">▶ ESCUCHAR</button></div></section>'
       + ((E.diagnostico || {}).activo ? '<section class="hud bloque diag-tarjeta"><p class="sobretitulo">Diagnóstico final · ahora</p>'

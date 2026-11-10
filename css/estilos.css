@@ -506,3 +506,9 @@ h2.seccion { font-size: clamp(19px, 5vw, 26px); color: var(--malachite); text-tr
 
 /* Anuncio de grupo completo */
 .anuncio-completo { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--malachite); border-radius: 8px; font-weight: 700; color: var(--malachite); }
+
+/* Estación 6 · cierre: productos protagonistas */
+.productos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+.producto h3 { font: 700 26px var(--display); margin: 4px 0 8px; color: var(--malachite); }
+.producto p { font-size: 14px; margin: 6px 0; }
+@media (max-width: 720px) { .productos { grid-template-columns: 1fr; } }
