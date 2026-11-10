@@ -135,7 +135,30 @@
     if (actual.trim()) out.push(actual.trim());
     return out;
   }
+  /* Voz única (ElevenLabs · Edoardo): si el texto tiene su audio grabado en
+     audio/voz-unica/manifest.json, se reproduce el archivo; si no, voz del dispositivo. */
+  let manifestVoz = null, audioActual = null;
+  function cargarManifest() {
+    if (!manifestVoz) manifestVoz = fetch('audio/voz-unica/manifest.json').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    return manifestVoz;
+  }
+  cargarManifest();
   function decir(texto, alTerminar) {
+    if (!sonido || !texto) { if (alTerminar) alTerminar(); return; }
+    const clave = String(texto).trim();
+    cargarManifest().then(man => {
+      const archivo = man[clave];
+      if (archivo && sonido) {
+        const id = ++colaVoz;
+        if ('speechSynthesis' in window) speechSynthesis.cancel();
+        const a = new Audio(archivo); audioActual = a;
+        a.onended = () => { if (id === colaVoz && alTerminar) alTerminar(); };
+        a.onerror = () => { if (id === colaVoz) decirDispositivo(texto, alTerminar); };
+        a.play().catch(() => { if (id === colaVoz) decirDispositivo(texto, alTerminar); });
+      } else decirDispositivo(texto, alTerminar);
+    });
+  }
+  function decirDispositivo(texto, alTerminar) {
     if (!sonido || !('speechSynthesis' in window) || !texto) { if (alTerminar) alTerminar(); return; }
     speechSynthesis.cancel();
     const id = ++colaVoz, partes = bloques(texto);
@@ -151,7 +174,7 @@
     });
   }
   function elegirVelocidad(v) { if (VELOCIDADES[v]) { velocidad = v; guardar('velocidad', v); } }
-  function callar() { colaVoz++; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  function callar() { colaVoz++; if (audioActual) { audioActual.pause(); audioActual = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); }
   function alternarSonido() { sonido = !sonido; guardar('sonido', sonido); if (!sonido) callar(); return sonido; }
   function elegirVoz(uri) { guardar('voz', uri); cargarVoces(); }
 
