@@ -58,7 +58,7 @@
     const opGrupos = J.grupos.map(g => {
       const n = (grupos[g.id] && grupos[g.id].miembros) || 0;
       return '<button type="button" class="opcion ' + (sel.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '">'
-        + '<span class="simbolo">' + g.simbolo + '</span><span>' + M.esc(g.nombre) + '<small>' + n + ' / 7 tripulantes</small></span></button>';
+        + '<span class="simbolo">' + M.insignia(g.id) + '</span><span>' + M.esc(g.nombre) + '<small>' + n + ' / 7 tripulantes</small></span></button>';
     }).join('');
     const opRoles = Object.keys(J.roles).map(id => {
       const r = J.roles[id], l = sel.grupo ? libres(sel.grupo, id) : r.cupo;

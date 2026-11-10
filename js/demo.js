@@ -1,6 +1,6 @@
 /* ==========================================================================
    DEMO DEL ECOSISTEMA · recorrido guiado para presentar la experiencia
-   Muestra la ruta completa, las 6 pantallas, el diagnóstico y los roles, con cada
+   Muestra la ruta completa del jugador, las 6 pantallas y los roles, con cada
    pantalla funcionando en vivo dentro de un marco de celular o de pantalla.
    En la esquina, una nota con las claves de la sesión para la demostración
    (se abre con el PIN del Guía Especialista).
@@ -17,33 +17,32 @@
       enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/bitacora.html' },
     { id: 'guia', nombre: 'Guía Especialista', archivo: 'guia.html', marco: 'celular', quien: 'Personal de Solventum a cargo de la maleta',
       cuando: 'Antes, durante y después de la sesión',
-      que: ['Entra con su PIN: es el administrador del juego.', 'Genera los dos códigos (registro y Sala de Escape) y proyecta sus QR.', 'Ve los 4 grupos en vivo: tripulación, diagnóstico, estación, reloj y puntos.', 'Puede liberar la Sala o revelar al ganador sin esperar a quienes falten por el diagnóstico.', 'Reinicia un grupo ante una falla técnica, descarga el Excel y abre una nueva sesión.'] },
+      que: ['Entra con su PIN: es el administrador del juego.', 'Genera los dos códigos (registro y Sala de Escape); El Gran Tablero los muestra con sus QR.', 'Ve los 4 grupos en vivo: tripulación, estación, reloj y puntos.', 'Reinicia un grupo ante una falla técnica, descarga el Excel y abre una nueva sesión.', 'Si no hay internet, la maleta funciona sola: temporizadores, pistas del instructivo y códigos en la bitácora del Copiloto.'] },
     { id: 'entrada', nombre: 'Pórtico de Entrada', archivo: 'entrada.html', marco: 'celular', quien: 'Los 7 integrantes de cada grupo, en su propio celular',
-      cuando: 'Al llegar (registro y diagnóstico inicial) y al terminar (diagnóstico final)',
-      que: ['Escanean el QR (ya trae el código de registro).', 'Eligen su grupo, escriben nombre completo y profesión, toman su rol y aceptan la autorización de datos.', 'Responden el diagnóstico inicial: 10 preguntas con escala de certeza, una rutina de pensamiento y una imagen.', 'Reciben su credencial digital de misión y ven a su tripulación completarse.', 'Al cerrar la Estación 5 se abre ahí mismo el diagnóstico final, con su avance y el porqué de cada respuesta.'] },
+      cuando: 'Al llegar, antes de cruzar el portal',
+      que: ['Escanean el QR de El Gran Tablero (ya trae el código de registro).', 'Eligen su grupo, escriben nombre completo y profesión, toman el rol de su escarapela y aceptan la autorización de datos.', 'Reciben su credencial digital de misión y ven a su tripulación de 7 completarse.', 'El Comandante de Misión entra desde aquí a la Sala de Escape.'] },
     { id: 'sala', nombre: 'Sala de Escape', archivo: 'sala.html', marco: 'celular', quien: 'Solo el Comandante de Misión (Custodio Digital)',
       cuando: 'Durante el juego: bienvenida, Estaciones 1 a 5 y cierre',
-      que: ['El Guardián de la Línea del Tiempo da la bienvenida con voz.', 'La Estación 1 se abre cuando toda la tripulación terminó el diagnóstico inicial.', 'Las estaciones se abren en orden; cada una corre 12 minutos (+30 s de gracia).', 'Muestra las tarjetas de instrucciones y lo que antes estaba en las paredes.', 'El Comandante digita los códigos: 2 intentos; si fallan, ve la respuesta correcta.', 'Al cerrar cada estación: puntaje, agilidad y retroalimentación con voz.'] },
-    { id: 'tablero', nombre: 'El Gran Tablero', archivo: 'tablero.html', marco: 'pantalla', quien: 'Pantalla grande o televisor de la sala',
+      que: ['El Guardián de la Línea del Tiempo da la bienvenida con voz: la consola es la voz guía.', 'Las estaciones se abren en orden; cada una corre 12 minutos (+30 s de gracia) y la voz anuncia los minutos 6, 10 y 11.', 'Muestra las tarjetas de instrucciones y, para interactuar, lo que en Cartagena estaba en las paredes.', 'Las 14 pruebas tienen 3 pistas cada una que se escuchan: se habilitan con el tiempo.', 'El Comandante digita los códigos: 2 intentos; si fallan, ve la respuesta correcta. El Copiloto los anota en la bitácora como respaldo.', 'Al cerrar cada estación: puntaje, agilidad y retroalimentación con voz.'] },
+    { id: 'tablero', nombre: 'El Gran Tablero', archivo: 'tablero.html', marco: 'pantalla', quien: 'Televisor o tablet del Guía Especialista',
       cuando: 'Todo el tiempo, a la vista de todos',
-      que: ['Ranking de los 4 grupos en vivo.', 'Estación en curso y reloj de cada grupo.', 'Puntos por estación y total sobre 100.', 'Revela al grupo ganador cuando todos terminan el diagnóstico final.'] },
-    { id: 'cierre', nombre: 'Cierre de Ruta', archivo: 'cierre-de-ruta.html', marco: 'celular', quien: 'Cada participante, en su celular o computador',
+      que: ['Muestra los QR y los códigos para abrir el Pórtico de Entrada y la Sala de Escape (con el PIN del Guía).', 'Ranking de los 4 grupos en vivo, con su estación en curso y su reloj.', 'Puede anunciar con voz los minutos 6, 10 y 11 de cada grupo por el parlante Bluetooth de la maleta.', 'Puntos por estación y total sobre 100; anuncia al grupo ganador.'] },
+    { id: 'cierre', nombre: 'Memoria de la Ruta', archivo: 'memoria-de-la-ruta.html', marco: 'celular', quien: 'Cada participante, en su celular o computador',
       cuando: 'Después de la experiencia (se envía el enlace)',
-      que: ['Las 5 postales en digital: del minuto cero a la reconstrucción.', 'Cada postal se gira: frente con ilustración y texto; reverso con mensaje clave y referencias.', 'Termina con la línea de tiempo de los 5 mensajes clave.'],
-      enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/cierre-de-ruta.html' }
+      que: ['Las 5 paradas (las postales) en digital: del minuto cero a la reconstrucción.', 'Cada parada se gira: frente con ilustración y texto; reverso con mensaje clave y referencias.', 'Termina con la línea de tiempo de los 5 mensajes clave.'],
+      enlace: 'https://www.experienciasimone.com/maquina-del-tiempo/memoria-de-la-ruta.html' }
   ];
 
   const MOMENTOS = [
     ['T−3', 'Bitácora de Tránsito Temporal', 'Expectativa: 3 días antes'],
-    ['1', 'Pórtico de ingreso', 'Registro, diagnóstico inicial y bienvenida del Guardián'],
+    ['1', 'Pórtico de Ingreso', 'Registro y bienvenida del Guardián'],
     ['2', 'Estación 1', 'El Umbral del Trauma'],
     ['3', 'Estación 2', 'El Enigma del Vacío'],
     ['4', 'Estación 3', 'El Taller del Cronógrafo'],
     ['5', 'Estación 4', 'El Vínculo de Vigilancia'],
     ['6', 'Estación 5', 'El Salto Temporal'],
-    ['7', 'Diagnóstico final', 'Qué cambió en cada tripulante'],
-    ['8', 'Cierre', 'Puntaje total y grupo ganador'],
-    ['T+1', 'Cierre de Ruta', 'Las 5 postales, después de la experiencia']
+    ['7', 'Cierre · El Gran Tablero', 'Puntaje total y grupo ganador'],
+    ['T+1', 'Memoria de la Ruta', '5 paradas: las postales, después de la experiencia']
   ];
 
   let sel = (location.hash || '').slice(1);
@@ -68,7 +67,7 @@
     app.innerHTML = '<header class="cabecera">' + M.logo() + '<div class="titulo-cab"><b>' + M.esc(J.titulo) + '</b><small>Demo del ecosistema digital</small></div></header>'
       + '<main class="pagina demo">'
       + '<section class="demo-intro"><p class="sobretitulo">Escape room médica híbrida</p><h1 class="titulo-juego">Así funciona el ecosistema</h1>'
-      + '<p class="suave">La maleta trae el juego físico: fichas, cubos, candados y el kit AbThera™. El ecosistema digital asume el papel del facilitador: registra a los participantes, conduce las 5 estaciones en orden, controla el tiempo, valida los códigos y muestra los resultados en vivo.</p></section>'
+      + '<p class="suave">La maleta trae el juego físico: baúles con candado, fichas de madera, cubos y el kit AbThera™. El ecosistema digital es la voz guía de la experiencia: registra a los participantes, conduce las 5 estaciones en orden, da las pistas por voz, controla el tiempo, valida los códigos y muestra los resultados en vivo. Si no hay internet, la maleta funciona sola con el instructivo del Guía.</p></section>'
 
       + '<section class="bloque"><p class="sobretitulo">La ruta completa</p><ol class="momentos">'
       + MOMENTOS.map(m => '<li><span class="num">' + m[0] + '</span><b>' + M.esc(m[1]) + '</b><small>' + M.esc(m[2]) + '</small></li>').join('') + '</ol></section>'
@@ -84,18 +83,6 @@
       + (p.enlace ? '<p class="suave" style="font-size:12px;margin-top:8px;word-break:break-all">' + M.esc(p.enlace) + '</p>' : '')
       + '<p class="suave" style="font-size:12px;margin-top:10px">Las pantallas funcionan en vivo y se guardan en la sesión actual. Después de una demostración, el Guía Especialista toca "Nueva sesión" para dejar todo en cero.</p></div>'
       + marco(p) + '</div></section>'
-
-      + '<section class="hud bloque"><p class="sobretitulo">Diagnóstico antes y después</p>'
-      + '<p>Cada tripulante responde en su celular un diagnóstico individual antes de la Estación 1 y otro al cerrar la Estación 5. Mide qué cambió en lo que sabe, decide y piensa. No suma puntos al juego y su resultado individual es confidencial.</p>'
-      + '<ul class="lista-demo">'
-      + '<li><b>Saber y hacer:</b> 10 preguntas antes y 10 después, dos por estación (un concepto y un caso). Las opciones salen en orden distinto en cada celular y no se puede volver atrás.</li>'
-      + '<li><b>Certeza:</b> después de cada respuesta, "Seguro · Creo que sí · Lo adivino". Así se distingue el dominio real del error con certeza.</li>'
-      + '<li><b>Pensar:</b> antes, "Pienso que… · Me inquieta… · Quiero explorar…"; después, "Antes pensaba que… · Ahora pienso que…".</li>'
-      + '<li><b>Expresar:</b> elige una imagen (reloj de arena, brújula, puente, red de seguridad, semilla o laberinto) y escribe una palabra.</li>'
-      + '<li><b>Ritmo del juego:</b> la Sala se abre cuando toda la tripulación terminó el diagnóstico inicial; El Gran Tablero revela al ganador cuando todos envían el final. El Guía Especialista puede adelantar cualquiera de los dos.</li>'
-      + '<li><b>Resultados:</b> al final cada persona ve su avance (antes → después) y el porqué de cada pregunta. El Excel del Guía trae cada respuesta con su certeza, las reflexiones y el resumen por persona.</li>'
-      + '</ul><p class="suave" style="font-size:12px;margin-top:8px">Las respuestas correctas se califican en el servidor: nunca viajan al celular.</p>'
-      + '</section>'
 
       + '<section class="bloque"><p class="sobretitulo">Los roles de cada tripulación (7 integrantes)</p><div class="roles-demo">' + roles + '</div></section>'
 
@@ -136,7 +123,6 @@
             return '<p class="nota-est">E' + c.numero + ' · ' + M.esc(c.nombre) + '</p><ul>'
               + porEst[e].map(x => '<li><span>' + M.esc(x.codigo) + '</span><b>' + M.esc(x.respuesta || '—') + '</b></li>').join('') + '</ul>';
           }).join('')
-        + '<p class="nota-pie">Diagnóstico: cualquier respuesta sirve para avanzar en la demo.</p>'
         + '<div class="nota-acc"><button data-k="recargar">↻ ACTUALIZAR</button><button data-k="olvidar">OLVIDAR PIN</button></div>';
     }
     return '<aside class="nota-claves"><header><b>🔑 Claves de la demo</b><button data-k="cerrar" aria-label="Minimizar">–</button></header>'

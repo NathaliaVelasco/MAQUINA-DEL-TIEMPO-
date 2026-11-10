@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CIERRE DE RUTA · el juego de 5 postales en versión digital
+   MEMORIA DE LA RUTA · 5 paradas (el juego de 5 postales en versión digital)
    Máquina del Tiempo · Cirugía del Futuro
    Metodología y diseño: Nathalia Velasco · Simoné
    ========================================================================== */
@@ -117,11 +117,11 @@
   app.innerHTML =
     '<header class="cdr-cab">'
     + '<a class="cdr-marca" href="index.html" aria-label="Inicio"><img src="img/solventum-logo.png" alt="Solventum"></a>'
-    + '<div class="cdr-cab-txt"><b>Cierre de Ruta</b><small>Máquina del Tiempo</small></div>'
+    + '<div class="cdr-cab-txt"><b>Memoria de la Ruta</b><small>Máquina del Tiempo</small></div>'
     + '<button class="btn-sonido" id="sonido" type="button" aria-pressed="false">♪</button>'
     + '<button class="btn-sonido" id="voz" type="button" aria-pressed="false" aria-label="Escuchar">▶<span class="txt-largo"> Escuchar</span></button>'
     + '</header>'
-    + '<nav class="cdr-ruta" id="ruta" aria-label="Las 5 postales"></nav>'
+    + '<nav class="cdr-ruta" id="ruta" aria-label="Las 5 paradas"></nav>'
     + '<main class="cdr-escena" id="escena"></main>';
 
   const $ruta = document.getElementById('ruta');
@@ -136,7 +136,7 @@
     POSTALES.forEach((p, i) => {
       const n = i + 1;
       const cls = (n === indice ? ' actual' : '') + (vistas.has(n) ? ' vista' : '');
-      h += '<li class="cdr-parada' + cls + '"><button type="button" data-ir="' + n + '" aria-label="Postal ' + n + ': ' + esc(p.titulo) + '"'
+      h += '<li class="cdr-parada' + cls + '"><button type="button" data-ir="' + n + '" aria-label="Parada ' + n + ': ' + esc(p.titulo) + '"'
         + (n === indice ? ' aria-current="step"' : '') + '>'
         + '<span class="cdr-punto">' + dos(n) + '</span><span class="cdr-etapa">' + esc(p.etapa) + '</span></button></li>';
     });
@@ -152,11 +152,11 @@
     return '<section class="cdr-portada">'
       + '<img class="cdr-emblema" src="img/cierre-de-ruta/emblema.png" alt="">'
       + '<p class="sobretitulo centro">Máquina del Tiempo · Cirugía del Futuro</p>'
-      + '<h1 class="titulo-juego cdr-titulo">Cierre de Ruta</h1>'
-      + '<p class="subtitulo-juego">5 postales · del minuto cero a la reconstrucción</p>'
+      + '<h1 class="titulo-juego cdr-titulo">Memoria de la Ruta</h1>'
+      + '<p class="subtitulo-juego">5 paradas · del minuto cero a la reconstrucción</p>'
       + '<div class="hud cdr-intro">'
-      + '<p>La misión terminó, pero el paciente sigue su camino. Estas cinco postales recorren la ruta completa del abdomen abierto: desde la decisión de no cerrar hasta la preparación del tejido para reconstruir.</p>'
-      + '<p class="suave">Lee el frente de cada postal y gírala para descubrir su mensaje clave y la evidencia que lo respalda.</p>'
+      + '<p>La misión terminó, pero el paciente sigue su camino. Estas cinco paradas recorren la ruta completa del abdomen abierto: desde la decisión de no cerrar hasta la preparación del tejido para reconstruir.</p>'
+      + '<p class="suave">Lee el frente de cada parada y gírala para descubrir su mensaje clave y la evidencia que lo respalda.</p>'
       + '</div>'
       + '<ol class="cdr-indice">'
       + POSTALES.map((p, i) => '<li><button type="button" data-ir="' + (i + 1) + '" class="' + (vistas.has(i + 1) ? 'vista' : '') + '">'
@@ -193,7 +193,7 @@
       + '<button class="btn contorno cdr-girar" type="button" id="girar">⟲ ' + (cara === 'frente' ? 'Ver reverso' : 'Ver frente') + '</button>'
       + '<button class="btn primario" type="button" data-ir="' + (n + 1) + '" aria-label="Siguiente">' + (n === TOTAL ? 'Cerrar ruta' : '<span class="txt-largo">Siguiente </span>▶') + '</button>'
       + '</div>'
-      + '<p class="cdr-ayuda suave centro">Desliza para cambiar de postal · toca «Ver reverso» para girarla</p>';
+      + '<p class="cdr-ayuda suave centro">Desliza para cambiar de parada · toca «Ver reverso» para girarla</p>';
   }
 
   function cierre() {

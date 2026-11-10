@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIDO · CIERRE DE RUTA
+   SONIDO · MEMORIA DE LA RUTA
    Ambiente suave en bucle + un destello sonoro al girar o cambiar de postal.
    Usa los audios de ElevenLabs si están en la carpeta audio/:
      audio/cierre-ambiente.mp3  (bucle de ambiente)

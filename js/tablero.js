@@ -6,6 +6,13 @@
   'use strict';
   const M = window.MDT, C = M.C, J = C.juego, app = document.getElementById('app');
   let T = null, ganadorVisto = M.leer('ganador-visto', ''), errorRed = '';
+  /* Códigos de la sesión: El Gran Tablero es la pantalla del Guía Especialista
+     (televisor o tablet). Con su PIN muestra los QR con el código incluido y los
+     códigos en grande para que los participantes abran los enlaces en su celular. */
+  let pin = (() => { try { return localStorage.getItem('mdt-pin-tablero') || sessionStorage.getItem('mdt-pin') || ''; } catch (e) { return ''; } })();
+  let K = null;                           // { registro, sala }
+  let anuncios = M.leer('tablero-anuncios', false);
+  const anunciados = M.leer('tablero-anunciados', {});
 
   function qrSVG(texto) {
     try { const q = qrcode(0, 'M'); q.addData(texto); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
@@ -39,7 +46,7 @@
           }).join('');
           return '<article class="hud carta-grupo ' + (g.registrado ? '' : 'inactivo') + (i === 0 && g.total > 0 ? ' lider' : '') + '" style="--g:' + info.color + '">'
             + '<span class="puesto">' + (g.registrado ? (i + 1) : '') + '</span>'
-            + '<div class="g-nombre"><span class="simbolo">' + info.simbolo + '</span>' + M.esc(info.nombre) + '</div>'
+            + '<div class="g-nombre"><span class="simbolo">' + M.insignia(g.grupo) + '</span>' + M.esc(info.nombre) + '</div>'
             + '<div class="g-total">' + g.total + '<small> pts</small></div>'
             + '<div class="g-estado">' + M.esc(st.texto) + '</div>'
             + (st.reloj ? '<div class="g-reloj ' + (st.gracia ? 'gracia' : '') + '" data-reloj="' + g.grupo + '">' + st.reloj + '</div>' : '')
@@ -51,10 +58,15 @@
       + '<div class="derecha" id="hora"></div></header>'
       + cuerpo
       + '<footer class="portico-pie">'
-      + '<div class="qr">' + qrSVG(base + 'entrada.html') + '<div><b>Pórtico de Entrada</b><span>Todos: regístrense aquí</span></div></div>'
-      + '<div class="qr">' + qrSVG(base + 'sala.html') + '<div><b>Sala de Escape</b><span>Solo el Comandante de Misión</span></div></div>'
+      + '<div class="qr">' + qrSVG(base + 'entrada.html' + (K ? '?c=' + encodeURIComponent(K.registro) : '')) + '<div><b>Pórtico de Entrada</b><span>Todos: escaneen y regístrense</span>'
+      + (K ? '<span class="codigo-grande">' + M.esc(K.registro) + '</span>' : '') + '</div></div>'
+      + '<div class="qr">' + qrSVG(base + 'sala.html' + (K ? '?c=' + encodeURIComponent(K.sala) : '')) + '<div><b>Sala de Escape</b><span>Solo el Comandante de Misión</span>'
+      + (K ? '<span class="codigo-grande">' + M.esc(K.sala) + '</span>' : '') + '</div></div>'
       + '</footer>'
-      + '<a class="btn fantasma pequeno admin-btn" href="guia.html">⚙ GUÍA ESPECIALISTA</a>'
+      + '<div class="tablero-ctrl">'
+      + '<button class="btn fantasma pequeno" data-t="anuncios">' + (anuncios ? '🔊 ANUNCIOS DEL RELOJ: SÍ' : '🔇 ANUNCIOS DEL RELOJ: NO') + '</button>'
+      + (K ? '' : '<button class="btn fantasma pequeno" data-t="codigos">🔑 MOSTRAR CÓDIGOS</button>')
+      + '<a class="btn fantasma pequeno" href="guia.html">⚙ GUÍA ESPECIALISTA</a></div>'
       + '</main>';
     revisarGanador();
   }
@@ -72,10 +84,45 @@
     const info = M.grupo(top.grupo);
     app.insertAdjacentHTML('beforeend', '<div class="ganador" id="ganador" data-firma="' + M.esc(firma) + '"><div>'
       + M.logo('logo-portal') + '<p class="sobretitulo">La línea de tiempo ha sido restaurada</p>'
-      + '<h2>¡GANADOR!</h2><p style="color:' + info.color + '">' + info.simbolo + ' ' + M.esc(info.nombre) + '</p>'
+      + '<h2>¡GANADOR!</h2><p style="color:' + info.color + '">' + M.insignia(top.grupo, 'grande') + ' ' + M.esc(info.nombre) + '</p>'
       + '<p style="font-family:var(--mono);color:var(--malachite)">' + top.total + ' / 100</p>'
       + '<p class="suave" style="font-size:clamp(12px,1vw,18px);margin-top:2vw">Toquen la pantalla para volver al marcador.</p></div></div>');
     M.SFX.portal();
+  }
+
+  /* Anuncios por el parlante de la maleta: minutos 6, 10 y 11 de cada grupo. */
+  const AVISOS = [[360, 'minuto seis. Quedan seis minutos.'], [600, 'minuto diez. Quedan dos minutos.'], [660, 'minuto once. Queda un minuto.']];
+  function anunciar() {
+    if (!anuncios || !T) return;
+    T.grupos.forEach(g => {
+      if (!g.actual) return;
+      const trans = (M.ahora() - new Date(g.actual.inicio).getTime()) / 1000, n = M.estacion(g.actual.estacion).numero;
+      AVISOS.forEach(([s, txt], i) => {
+        const k = g.grupo + g.actual.inicio + i;
+        if (trans >= s && trans < s + 25 && !anunciados[k]) {
+          anunciados[k] = 1; M.guardar('tablero-anunciados', anunciados);
+          M.SFX.tic(); M.decir(M.grupo(g.grupo).nombre + ', estación ' + n + ': ' + txt);
+        }
+      });
+    });
+  }
+  async function cargarCodigos() {
+    if (!pin) return;
+    try { const v = await M.rpc('mdt_admin', { p_pin: pin, p_accion: 'verificar', p_dato: null }); K = { registro: v.codigo_acceso, sala: v.codigo_sala }; }
+    catch (e) { if (/PIN/i.test(e.message)) { pin = ''; try { localStorage.removeItem('mdt-pin-tablero'); } catch (x) {} } }
+  }
+  function modalPin(err) {
+    const m = document.getElementById('modal'); if (m) m.remove();
+    app.insertAdjacentHTML('beforeend', '<div class="modal" id="modal"><section class="hud"><p class="sobretitulo">Guía Especialista</p>'
+      + '<p>Escriba su PIN para mostrar en El Gran Tablero los códigos de registro y de la Sala de Escape. Este equipo lo recordará.</p>'
+      + '<form id="fpin"><input type="password" id="tpin" class="entrada" placeholder="PIN" autocomplete="current-password"><p class="error">' + M.esc(err || '') + '</p>'
+      + '<div class="acciones"><button class="btn fantasma" type="button" data-t="cerrar">CANCELAR</button><button class="btn primario" type="submit">MOSTRAR</button></div></form></section></div>');
+    document.getElementById('fpin').onsubmit = async ev => {
+      ev.preventDefault(); pin = document.getElementById('tpin').value.trim(); await cargarCodigos();
+      if (!K) return modalPin('PIN incorrecto.');
+      try { localStorage.setItem('mdt-pin-tablero', pin); } catch (e) {}
+      document.getElementById('modal').remove(); render();
+    };
   }
 
   async function actualizar() {
@@ -94,9 +141,18 @@
   }
 
   app.addEventListener('click', ev => {
+    const t = ev.target.closest('[data-t]');
+    if (t) {
+      M.audio();
+      if (t.dataset.t === 'anuncios') { anuncios = !anuncios; M.guardar('tablero-anuncios', anuncios); if (anuncios) M.decir('Anuncios del reloj activados.'); render(); }
+      if (t.dataset.t === 'codigos') modalPin();
+      if (t.dataset.t === 'cerrar') document.getElementById('modal').remove();
+      return;
+    }
     const gan = ev.target.closest('#ganador');
     if (gan) { ganadorVisto = gan.dataset.firma; M.guardar('ganador-visto', ganadorVisto); gan.remove(); }
   });
 
-  actualizar(); setInterval(() => { if (!document.getElementById('modal')) actualizar(); }, 3000); setInterval(relojes, 500);
+  cargarCodigos().then(actualizar); setInterval(() => { if (!document.getElementById('modal')) actualizar(); }, 3000);
+  setInterval(() => { relojes(); anunciar(); }, 500); setInterval(cargarCodigos, 20000);
 })();

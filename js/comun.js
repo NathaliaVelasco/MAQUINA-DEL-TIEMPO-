@@ -44,6 +44,17 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mmss = seg => { const n = Math.max(0, Math.ceil(seg)); return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); };
   const grupo = id => C.juego.grupos.find(g => g.id === id) || { id: id, nombre: id, color: '#05dd4d', simbolo: '◆' };
+  /* Insignia de cada grupo, igual a la escarapela: círculo de color con su símbolo. */
+  const ICONOS_GRUPO = {
+    davinci: '<path d="M28.5 8.5 15.5 27h7.5l-4.5 12.5L33 20h-7.5l5-11.5z" fill="#0c1a10" transform="translate(1.2 1.2)"/><path d="M28.5 8.5 15.5 27h7.5l-4.5 12.5L33 20h-7.5l5-11.5z" fill="#fff"/>',
+    verne: '<g fill="#fff">' + Array.from({ length: 10 }, (_, i) => '<rect x="21.6" y="8.5" width="4.8" height="6" rx="1" transform="rotate(' + (i * 36) + ' 24 24)"/>').join('') + '<circle cx="24" cy="24" r="12"/></g><circle cx="24" cy="24" r="6.6" fill="none" stroke="#111" stroke-width="2.6"/><circle cx="24" cy="24" r="5.2" fill="#e36318"/>',
+    wells: '<path d="M15 10h18M15 38h18" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M17 11.5c0 7 7 9 7 12.5s-7 5.5-7 12.5M31 11.5c0 7-7 9-7 12.5s7 5.5 7 12.5" fill="none" stroke="#111" stroke-width="2"/><path d="M18.6 14h10.8c-1 4.6-5.4 6.4-5.4 9-0-2.6-4.4-4.4-5.4-9zM18.4 35.6c.8-4.4 4.6-6.2 5.6-8.6 1 2.4 4.8 4.2 5.6 8.6z" fill="#fff"/>',
+    tesla: '<path d="M24 9c1.4 9.6 5.4 13.6 15 15-9.6 1.4-13.6 5.4-15 15-1.4-9.6-5.4-13.6-15-15 9.6-1.4 13.6-5.4 15-15z" fill="#0b1020"/>'
+  };
+  const insignia = (id, cls) => {
+    const g = grupo(id);
+    return '<svg class="insignia ' + (cls || '') + '" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="' + g.color + '"/>' + (ICONOS_GRUPO[id] || '') + '</svg>';
+  };
   const estacion = id => C.estaciones.find(e => e.id === id);
   const rol = id => C.juego.roles[id] || { nombre: id, subtitulo: '', mision: [] };
   const logo = (clase) => '<img class="' + (clase || 'logo') + '" src="img/solventum-logo.png" alt="Solventum">';
@@ -115,7 +126,7 @@
   /* Une las frases en bloques largos: cada bloque nuevo es una pausa del
      motor de voz, y muchas pausas hacen que el Guardián suene lento. */
   function bloques(texto) {
-    const frases = String(texto).replace(/™/g, '').replace(/\s+/g, ' ').match(/[^.!?]+[.!?]*/g) || [String(texto)];
+    const frases = String(texto).replace(/™/g, '').replace(/mmHg/g, 'milímetros de mercurio').replace(/\s*°C/g, ' grados').replace(/\s+/g, ' ').match(/[^.!?]+[.!?]*/g) || [String(texto)];
     const out = []; let actual = '';
     frases.forEach(f => {
       if ((actual + ' ' + f).length > 220 && actual) { out.push(actual.trim()); actual = f; }
@@ -146,7 +157,7 @@
 
   window.MDT = {
     C, rpc, mensajeError, guardar, leer, dispositivo, esc, mmss, grupo, estacion, rol, logo, urlDe,
-    sincronizar, ahora, audio, SFX, decir, callar, alternarSonido, elegirVoz, elegirVelocidad, esMasculina,
+    insignia, sincronizar, ahora, audio, SFX, decir, callar, alternarSonido, elegirVoz, elegirVelocidad, esMasculina,
     get sonido() { return sonido; }, get velocidad() { return velocidad; }, get voces() { return voces; }, get vozElegida() { return vozElegida; }
   };
 })();

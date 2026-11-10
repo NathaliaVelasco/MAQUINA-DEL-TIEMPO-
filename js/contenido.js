@@ -12,7 +12,7 @@ window.CONTENIDO = {
     titulo: 'MÁQUINA DEL TIEMPO',
     subtitulo: 'Código: Cirugía del Futuro',
     minutos: 12,
-    pistasSegundos: [120, 240, 360],
+    pistasSegundos: [60, 150, 240],
 
     /* Aplicación Prevena™ del cliente (desarrollo externo de Solventum).
        PENDIENTE: pegar aquí el enlace. Si queda vacío, la consola indica
@@ -20,10 +20,10 @@ window.CONTENIDO = {
     appPrevena: { url: '', nombre: 'Aplicación Prevena™' },
 
     grupos: [
-      { id: 'davinci', nombre: 'Alquimistas de Da Vinci', color: '#05dd4d', simbolo: '⚡', enfoque: 'Guiados por el dominio absoluto de la anatomía y la geometría de la pared abdominal.' },
-      { id: 'verne',   nombre: 'Exploradores de Verne',   color: '#c98a4b', simbolo: '⚙', enfoque: 'Inspirados por la ingeniería fantástica y los viajes hacia las profundidades del tejido visceral.' },
-      { id: 'wells',   nombre: 'Viajeros de Wells',       color: '#3d7bff', simbolo: '⌛', enfoque: 'Maestros en anticipar las complicaciones futuras y moldear la línea de tiempo del paciente.' },
-      { id: 'tesla',   nombre: 'Guardianes de Tesla',     color: '#f2b233', simbolo: '✦', enfoque: 'Expertos en dominar las presiones, la física médica y la energía del vacío en la pared abdominal.' }
+      { id: 'davinci', nombre: 'Alquimistas de Da Vinci', color: '#54a83a', simbolo: '⚡', enfoque: 'Guiados por el dominio absoluto de la anatomía y la geometría de la pared abdominal.' },
+      { id: 'verne',   nombre: 'Exploradores de Verne',   color: '#e36318', simbolo: '⚙', enfoque: 'Inspirados por la ingeniería fantástica y los viajes hacia las profundidades del tejido visceral.' },
+      { id: 'wells',   nombre: 'Viajeros de Wells',       color: '#5170ff', simbolo: '⌛', enfoque: 'Maestros en anticipar las complicaciones futuras y moldear la línea de tiempo del paciente.' },
+      { id: 'tesla',   nombre: 'Guardianes de Tesla',     color: '#e2e60c', simbolo: '✦', enfoque: 'Expertos en dominar las presiones, la física médica y la energía del vacío en la pared abdominal.' }
     ],
 
     roles: {
@@ -32,9 +32,9 @@ window.CONTENIDO = {
       copiloto:   { nombre: 'Copiloto', subtitulo: 'Custodio del Registro Manual', cupo: 1,
                     mision: ['Llevar el registro riguroso en el cuaderno de campo.', 'Anotar pistas, variables clínicas y deducciones del grupo.', 'Custodiar el historial físico de la misión.'] },
       comandante: { nombre: 'Comandante de Misión', subtitulo: 'Custodio Digital', cupo: 1,
-                    mision: ['Custodiar y operar el celular de la Sala de Escape.', 'Digitar códigos de validación y claves numéricas obtenidas.', 'Confirmar y enviar los resultados en cada estación.'] },
+                    mision: ['Custodiar y operar el celular.', 'Digitar códigos de validación y claves numéricas obtenidas.', 'Confirmar y enviar los resultados en cada estación.'] },
       tripulante: { nombre: 'Tripulante de Élite', subtitulo: 'Especialista Hands-On & Análisis', cupo: 4,
-                    mision: ['Inspeccionar minuciosamente el material táctico de la maleta.', 'Descifrar acertijos y analizar los casos clínicos.', 'Ejecutar las maniobras prácticas y el ensamblaje.'] }
+                    mision: ['Inspeccionar minuciosamente el material táctico en las mesas.', 'Descifrar acertijos y analizar los casos clínicos.', 'Ejecutar las maniobras prácticas y el ensamblaje.'] }
     },
 
     autorizacion: 'Autorizo el tratamiento de mi nombre completo y mi profesión únicamente para registrar mi participación en esta experiencia académica, conforme a la Ley 1581 de 2012 de protección de datos personales. No se solicitan otros datos.',
@@ -88,9 +88,9 @@ window.CONTENIDO = {
             nota: 'Sin respuesta a 2 L de cristaloides: shock refractario.',
             voz: 'Signos vitales: tensión arterial ochenta sobre cincuenta. Frecuencia cardíaca ciento treinta. Temperatura treinta y cuatro punto ocho grados. Ecografía FAST positiva: líquido libre en Morison y en toda la cavidad.' }],
           codigo: { pregunta: 'Tras analizar los resultados de los exámenes y confirmar el estado de shock refractario del paciente, ¿cuál es el código del hallazgo ecográfico que confirma el hemoperitoneo y justifica la laparotomía de urgencia inmediata?', formato: 'Sigla del examen + signo matemático de positividad', placeholder: 'XXXX±' },
-          pistas: ['Pregúntense: si cierran hoy esta pared, ¿qué le pasa al paciente en las próximas 24 horas?',
-                   'Busquen la Tríada Letal, el Síndrome Compartimental Abdominal, el edema que impide cerrar sin tensión, el packing con second-look y la necesidad de reevaluar perfusión.',
-                   'El código combina el nombre del examen de trauma con el signo de un resultado positivo.']
+          pistas: ['¿Qué fichas describen una práctica electiva o un paciente estable?',
+                   '¿Un paciente que responde a un bolo de 500 cc necesita abdomen abierto?',
+                   'Revisen las fichas 7 y 8: no justifican el abdomen abierto.']
         },
         {
           id: '1.2', titulo: 'El Enigma de la Tríada de la Muerte', reto: 'El Enigma de la Tríada de la Muerte (Shock Refractario)',
@@ -107,9 +107,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Hipotermia, acidosis y coagulopatía se alimentan entre sí. Si no rompen el círculo, ninguna sutura salvará a este paciente.',
           codigo: { pregunta: 'Para registrar el desbloqueo de la caja de seguridad y validar el hallazgo de la Tríada Letal: ¿cuál es la combinación de 3 dígitos utilizada para abrir el candado, derivada de la temperatura corporal crítica del paciente?', formato: 'Únicamente los 3 dígitos numéricos, sin puntos ni espacios', placeholder: '_ _ _', candado: true },
-          pistas: ['¿Cuál de los tres componentes de la Tríada pueden leer directamente en los datos que ya tienen?',
-                   'La hipotermia está definida por debajo de 35 °C.',
-                   'Miren los dígitos en azul de la tarjeta de temperatura, sin el punto decimal.']
+          pistas: ['¿Cuál de los exámenes tiene números de otro color?',
+                   'La hipotermia es la llave.',
+                   'Lean la temperatura sin el punto.']
         },
         {
           id: '1.3', titulo: 'La Decisión de Control de Daños', reto: 'Matriz de Decisión Quirúrgica y Control de Daños',
@@ -127,9 +127,9 @@ window.CONTENIDO = {
           pantalla: [{ tipo: 'documento', titulo: 'Reporte Quirúrgico · Laparotomía de Urgencia', encabezado: 'Historia clínica n.º 0508 · Santiago Piedrahita · 38 años',
             lineas: [['Hallazgos', 'Lesión hepática grado IV (hipocondrio derecho).'], ['', 'Hemoperitoneo masivo: 2.500 cc.'], ['', 'Desgarro de epiplón sin sangrado activo.'], ['', 'Edema severo de asas intestinales.'], ['Procedimiento', 'Empaquetamiento (packing) hepático y control de daños inicial.']] }],
           codigo: { pregunta: 'Tras clasificar las 4 conductas quirúrgicas de control de daños correctas: ¿cuál es el valor numérico resultante de la suma de sus fichas, que equivale al volumen crítico (en decilitros) del hemoperitoneo evacuado?', formato: 'Únicamente el valor numérico final de dos dígitos', placeholder: '_ _' },
-          pistas: ['La cirugía de control de daños tiene un objetivo inmediato: detener la hemorragia y la contaminación en el menor tiempo posible.',
-                   'Descarten todo lo que alargue la cirugía o cierre la pared.',
-                   'El resultado debe coincidir con el volumen del reporte, expresado en decilitros.']
+          pistas: ['¿Qué conducta prolonga la cirugía en un paciente en tríada letal?',
+                   '¿Se puede cerrar a tensión una pared edematizada?',
+                   'El resultado debe coincidir con el volumen del hemoperitoneo.']
         }
       ],
       clave: { id: '1.4', titulo: 'Clave combinada de salida', pregunta: 'Revisen la bitácora: a la combinación del candado de la Tríada (1.2) réstenle la suma de Conducta CCD (1.3).', formato: 'Valor numérico de tres dígitos', placeholder: '_ _ _' },
@@ -158,7 +158,9 @@ window.CONTENIDO = {
           ],
           atencion: 'La elección de un sistema artesanal o inadecuado provocará la pérdida irreversible del dominio fascial y fístulas enterocutáneas en la línea temporal del paciente.',
           codigo: { pregunta: 'Tras descartar los mitos del pasado y encajar las 9 funciones esenciales de la Terapia de Presión Negativa comercial en el tablero de bioingeniería: ¿cuál es el código alfanumérico revelado en el reverso del ensamble que confirma el dominio fascial?', formato: 'Código alfanumérico de 2 caracteres', placeholder: '_ _' },
-          pistas: []
+          pistas: ['¿Qué ficha suena a práctica artesanal?',
+                   '¿Un dispositivo debe aumentar la presión intraabdominal?',
+                   'Si el reverso no cierra la figura, hay una ficha cambiada.']
         },
         {
           id: '2.2', titulo: 'La Guerra de Tecnologías', reto: 'La Guerra de Tecnologías (AbThera™ vs. Bolsa de Bogotá y Barker)',
@@ -174,7 +176,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Elegir una alternativa con bajo cumplimiento de funciones incrementará el riesgo de retracción fascial, pérdida del espacio peritoneal y desarrollo de fístulas enterocutáneas.',
           codigo: { pregunta: 'Para validar el análisis comparativo de tecnologías y desbloquear la caja de suministros avanzados: ¿cuál es la combinación de 3 dígitos obtenida al evaluar el cumplimiento de las 9 funciones ideales en la Bolsa de Bogotá, la Técnica de Barker y la Terapia AbThera™ (en ese orden exacto)?', formato: 'Únicamente los 3 dígitos, sin espacios ni guiones, en el orden de las alternativas', placeholder: '_ _ _', candado: true },
-          pistas: []
+          pistas: ['Usen la Tabla de 9 funciones como regla de conteo.',
+                   'El orden de los dígitos es el de la tarjeta.',
+                   'Miren la esquina de cada alternativa.']
         },
         {
           id: '2.3', titulo: 'La Matriz Focalizada para Trauma', reto: 'La Matriz Focalizada para Trauma',
@@ -190,7 +194,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Errar en la priorización del drenaje o descuidar la tracción medial activa condenará al paciente a un abdomen congelado e imposible de cerrar.',
           codigo: { pregunta: 'Tras priorizar las 5 funciones vitales de la Terapia AbThera™ para el control del empaquetamiento hepático y la tracción fascial: ¿cuál es el código numérico de validación obtenido, que representa el porcentaje adicional de afrontamiento y movilización fascial frente a otros sistemas?', formato: 'Únicamente el número de 2 dígitos', placeholder: '_ _' },
-          pistas: []
+          pistas: ['Cada necesidad tiene una sola justificación que habla del caso.',
+                   'El número está junto al símbolo AbThera™.',
+                   'Es un porcentaje.']
         }
       ],
       clave: { id: '2.4', titulo: 'Clave final combinada', pregunta: 'Revisen sus apuntes: a la respuesta de la prueba 2.2 réstenle la respuesta de la prueba 2.3.', formato: 'Valor numérico de tres dígitos', placeholder: '_ _ _' },
@@ -219,7 +225,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Alterar el orden de los pasos o cometer omisiones en el manejo de la lámina fenestrada comprometerá la viabilidad de las asas intestinales y provocará fallas en el vacío.',
           codigo: { pregunta: 'Tras descartar los errores procedimentales y organizar los 8 pasos clave de la secuencia de colocación de la Terapia AbThera™: ¿cuál es el código alfanumérico que se revela en el respaldo del ensamble y confirma la precisión procedimental?', formato: 'Código alfanumérico de 2 caracteres', placeholder: '_ _' },
-          pistas: []
+          pistas: ['¿Qué va primero en contacto con las vísceras?',
+                   '¿Qué cánister soporta el volumen de un trauma?',
+                   'Si la imagen no encaja, revisen el orden de la fila 2.']
         },
         {
           id: '3.2', titulo: 'El Desafío Psicomotriz Hands-On', reto: 'Corte, Ajuste de Insumos y Monitoreo de Alarmas',
@@ -235,7 +243,9 @@ window.CONTENIDO = {
           ],
           atencion: '',
           codigo: { pregunta: '¿Cuál es el código de 3 dígitos comunicado al Guía Especialista?', formato: 'Código numérico de 3 dígitos', placeholder: '_ _ _' },
-          pistas: []
+          pistas: ['¿Cuántos litros tiene el cánister de trauma?',
+                   '¿Cuántas espumas usaron?',
+                   'El tercer dígito lo da el propio equipo de terapia.']
         }
       ],
       clave: { id: '3.3', titulo: 'Clave final combinada', pregunta: 'Revisen la bitácora: al código del Hands-On (3.2) réstenle el número de pasos de la secuencia de precisión (3.1).', formato: 'Valor numérico de tres dígitos', placeholder: '_ _ _' },
@@ -263,7 +273,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Confundir las variables de monitoreo del sistema con las del paciente puede enmascarar un choque hemorrágico persistente o una pérdida involuntaria de vacío.',
           codigo: { pregunta: 'Tras descartar las variables incorrectas y clasificar las 6 dimensiones del paciente y las 3 del sistema AbThera™: ¿cuál es la palabra clave revelada al alinear las letras de los 9 cubos?', formato: 'Únicamente la palabra, en mayúsculas y sin espacios', placeholder: 'PALABRA' },
-          pistas: []
+          pistas: ['¿Qué cubo no aplica a un trauma abdominal sin TEC severo?',
+                   'El sistema solo tiene 3 variables.',
+                   'Busquen la cara con el logo Embajadores.']
         },
         {
           id: '4.2', titulo: 'La Ventana Temporal', reto: 'La Ventana Temporal (El Estándar de las 72 Horas y Excepciones)',
@@ -286,7 +298,9 @@ window.CONTENIDO = {
               items: [['Sangrado no controlado', '3'], ['Sospecha de fuga intestinal', '1'], ['Isquemia intestinal', '2'], ['Equipo disfuncional', '3'], ['Aumento de la presión abdominal de 2 mmHg', '8'], ['Alarma de fuga en el sistema', '7'], ['Temperatura corporal de 38,3 °C', '5']] }
           ],
           codigo: { pregunta: 'Para registrar el intervalo de revisión en UCI y desbloquear el cofre de complicaciones y bondades: ¿cuál es la combinación de 4 dígitos del candado (horas estándar + n.º de excepciones + suma de valores)?', formato: 'Código numérico de 4 dígitos, sin espacios', placeholder: '_ _ _ _', candado: true },
-          pistas: []
+          pistas: ['¿Cuál es el límite antes de que aumenten las adherencias complejas?',
+                   '¿Qué situación se resuelve a pie de cama?',
+                   'El último dígito es una suma.']
         },
         {
           id: '4.3', titulo: 'La Balanza Clínica', reto: 'La Balanza Clínica (Complicaciones vs. Beneficios TPN)',
@@ -300,7 +314,9 @@ window.CONTENIDO = {
           ],
           atencion: 'Errar en el emparejamiento conceptual dejará desprotegida la cavidad frente a complicaciones catastróficas como fístulas o pérdida definitiva del dominio fascial.',
           codigo: { pregunta: 'Tras consolidar el emparejamiento de la matriz clínica: ¿cuál es el valor resultante de sumar la cantidad total de complicaciones más la cantidad total de bondades terapéuticas integradas en la balanza?', formato: 'Únicamente el valor numérico de 2 dígitos', placeholder: '_ _' },
-          pistas: []
+          pistas: ['Cada beneficio neutraliza una sola complicación.',
+                   '¿Qué evita que el intestino toque la pared?',
+                   'Cuenten todas las fichas de la balanza.']
         }
       ],
       clave: { id: '4.4', titulo: 'Clave final combinada', pregunta: 'Sumen la respuesta de la prueba 4.2 y la respuesta de la prueba 4.3.', formato: 'Valor numérico de cuatro dígitos', placeholder: '_ _ _ _' },
@@ -339,7 +355,9 @@ window.CONTENIDO = {
                       ['E', 'Variaciones en las presiones de la vía aérea menores de 4 mmHg al afrontar los bordes de la fascia: cierre con bajo riesgo de falla ventilatoria e hipertensión abdominal.']] }
           ],
           codigo: { pregunta: 'Tras auditar el estado del paciente y validar los 4 factores necesarios para el cierre fascial definitivo: ¿cuál es la palabra clave revelada por la secuencia de los criterios seleccionados?', formato: 'Únicamente la palabra de 4 letras, en mayúsculas', placeholder: '_ _ _ _' },
-          pistas: []
+          pistas: ['¿Cuáles describen un riesgo y no un criterio cumplido?',
+                   'Ojo con el umbral de 4 mmHg: aparece dos veces.',
+                   'La palabra es de 4 letras y habla de cuidado.']
         },
         {
           id: '5.2', titulo: 'El Enigma de la Herida Quirúrgica', reto: 'El Enigma de la Herida Quirúrgica (Tensión y Prevena™)',
@@ -359,23 +377,27 @@ window.CONTENIDO = {
               items: [['Modo de terapia', 'Presión negativa continua'], ['Presión de trabajo', '-125 mmHg'], ['Duración de la terapia', 'Hasta 7 días continuos'], ['Indicación', 'Incisiones cerradas de alto riesgo'], ['Unidad', 'Portátil, de un solo uso']] }
           ],
           codigo: { pregunta: 'Para validar la protección de la incisión cerrada de alta tensión y abrir la caja del sistema Prevena™ (presión continua + días de terapia): ¿cuál es el código de 4 dígitos del candado?', formato: 'Únicamente el número de 4 dígitos, sin espacios', placeholder: '_ _ _ _', candado: true },
-          pistas: []
+          pistas: ['¿Es la misma presión que AbThera™?',
+                   '¿Cuántos días dura la unidad portátil?',
+                   'Tres dígitos de presión más uno de días.']
         },
         {
           id: '5.3', titulo: 'La Coraza Biológica', reto: 'El Algoritmo Interactivo de Prevena™',
           situacionTitulo: 'Situación clínica en quirófano',
           situacion: [
             ['Escenario', 'El sistema Prevena™ ha sido activado y posicionado sobre la herida de laparotomía cerrada de alta tensión.'],
-            ['Objetivo de la misión', 'Activar la aplicación Prevena™, ejecutar la secuencia paso a paso de colocación digital y consolidar los 6 beneficios clínicos demostrados que reducen la morbilidad de la incisión de alto riesgo.']
+            ['Objetivo de la misión', 'Activar la pantalla táctil de Prevena™, ejecutar la secuencia paso a paso de colocación digital y consolidar los 6 beneficios clínicos demostrados que reducen la morbilidad de la incisión de alto riesgo.']
           ],
           mision: [
-            ['Abrir la aplicación Prevena™', 'Abran la aplicación Prevena™ de Solventum en uno o varios celulares de la tripulación (iPhone o Android) y sigan el paso a paso: preparación del lecho incisional, posicionamiento del apósito, sellado de bordes y activación del vacío.'],
+            ['Ir a la pantalla táctil de Prevena™', 'En la pantalla táctil de Prevena™ de la estación, ingresen el código 1257 y sigan el paso a paso: preparación del lecho incisional, posicionamiento del apósito, sellado de bordes y activación del vacío.'],
             ['Consolidar las ventajas clínicas', 'Al completar el flujo, revisen en la Sala de Escape la evidencia de las ventajas de Prevena™ en la incisión de laparotomía. Cuenten las ventajas verificadas y registren sus símbolos, en orden, en la bitácora.']
           ],
           atencion: 'No esperen la complicación para actuar. En laparotomías de alta tensión, la protección de la incisión es una decisión crítica desde el cierre.',
-          pantalla: [{ tipo: 'appPrevena' }, { tipo: 'ventajas', titulo: 'Evidencia · Ventajas de Prevena™ en la incisión de laparotomía' }],
-          codigo: { pregunta: 'Tras completar el paso a paso en la aplicación Prevena™ y revisar la evidencia clínica: ¿cuál es la cantidad total de beneficios clínicos verificados que aporta la terapia Prevena™ sobre la incisión de alto riesgo?', formato: 'Únicamente el número de 1 dígito', placeholder: '_' },
-          pistas: []
+          pantalla: [{ tipo: 'ventajas', titulo: 'Evidencia · Ventajas de Prevena™ en la incisión de laparotomía' }],
+          codigo: { pregunta: 'Tras completar el paso a paso en la pantalla táctil de Prevena™ y revisar la evidencia clínica: ¿cuál es la cantidad total de beneficios clínicos verificados que aporta la terapia Prevena™ sobre la incisión de alto riesgo?', formato: 'Únicamente el número de 1 dígito', placeholder: '_' },
+          pistas: ['Las ventajas aparecen al terminar el paso a paso en la pantalla táctil de Prevena™.',
+                   'Cada ventaja aporta un carácter al hito final de la estación.',
+                   'Cuenten: contaminación externa, bordes unidos, fluidos, tensión lateral, presión y días, y edema.']
         }
       ],
       clave: { id: '5.4', titulo: 'Clave final · Hito histórico', pregunta: 'Unan, en el orden en que aparecen en la imagen de evidencia de la prueba 5.3, los símbolos de las ventajas clínicas. Esa secuencia es el hito histórico que sella la línea de tiempo.', formato: 'Letras y números juntos, sin espacios', placeholder: '_ _ _ _ _ _' },

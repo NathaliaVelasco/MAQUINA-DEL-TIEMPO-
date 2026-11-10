@@ -84,7 +84,7 @@
       const lista = t.length ? '<ul class="lista-tripulacion">' + t.map(x => '<li><span>' + M.esc(x.nombre) + '<small style="display:block;color:var(--gris);font-size:12px">' + M.esc(x.profesion) + '</small>' + marcaDiag(x) + '</span><span>' + M.esc(ROLES[x.rol] || x.rol) + '</span></li>').join('') + '</ul>'
         : '<p class="suave" style="font-size:14px">Nadie se ha registrado en este grupo.</p>';
       return '<article class="hud bloque grupo-admin" style="--g:' + info.color + '">'
-        + '<div class="grupo-admin-cab"><b><span style="color:' + info.color + '">' + info.simbolo + '</span> ' + M.esc(info.nombre) + '</b><span class="total">' + g.total + ' pts</span></div>'
+        + '<div class="grupo-admin-cab"><b><span class="simbolo">' + M.insignia(g.grupo) + '</span> ' + M.esc(info.nombre) + '</b><span class="total">' + g.total + ' pts</span></div>'
         + '<p class="suave" style="font-size:14px;margin:4px 0 10px">' + M.esc(estadoGrupo(g)) + ' · ' + t.length + ' / 7 tripulantes</p>'
         + (P.diagnostico && g.registrado ? '<p class="suave" style="font-size:13px;margin:0 0 10px">Diagnóstico inicial <b style="color:var(--blanco)">' + g.diag_antes + ' / ' + t.length + '</b> · final <b style="color:var(--blanco)">' + g.diag_despues + ' / ' + t.length + '</b>'
             + (g.sala_liberada ? ' · <span style="color:var(--malachite)">Sala liberada</span>' : '') + '</p>' : '')

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FONDO DE CIRCUITO · exclusivo de CIERRE DE RUTA
+   FONDO DE CIRCUITO · exclusivo de MEMORIA DE LA RUTA
    Pistas de circuito impreso que corren de izquierda a derecha hacia un
    núcleo óptico con anillos que giran. Pulsos de luz viajan por las pistas.
    Liviano: las pistas se dibujan una sola vez; solo se animan los pulsos y

@@ -70,7 +70,7 @@
 
   /* ----------------------------------------------------------- 1. acceso */
   function pAcceso(err) {
-    const opGrupos = J.grupos.map(g => '<button type="button" class="opcion ' + (cfg.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '"><span class="simbolo">' + g.simbolo + '</span><span>' + M.esc(g.nombre) + '</span></button>').join('');
+    const opGrupos = J.grupos.map(g => '<button type="button" class="opcion ' + (cfg.grupo === g.id ? 'sel' : '') + '" data-grupo="' + g.id + '" style="--g:' + g.color + '"><span class="simbolo">' + M.insignia(g.id) + '</span><span>' + M.esc(g.nombre) + '</span></button>').join('');
     pinta(cab('Sala de Escape') + '<main class="pagina"><section class="hud">' + M.logo('logo-portal')
       + '<h1 class="titulo-juego">' + M.esc(J.titulo) + '</h1><p class="subtitulo-juego">Sala de Escape</p>'
       + '<p class="suave centro" style="margin-bottom:18px">Solo el Comandante de Misión (Custodio Digital) usa la Sala de Escape.</p>'
@@ -290,16 +290,43 @@
       + '<p class="pregunta">' + M.esc(def.pregunta) + '</p>' + cuerpo + '</section>';
   }
 
+  /* Pistas: la consola es la voz del Guía. Cada pista se habilita con el tiempo
+     de la prueba y se ESCUCHA (el texto queda disponible solo si lo piden). */
   function pistasHTML(p) {
-    if (!p.pistas || !p.pistas.length) return '';
+    if (!p.pistas || !p.pistas.length || resuelto(p.id)) return '';
     const k = clave('vista-' + p.id), desde = local[k] || M.ahora();
     const seg = (M.ahora() - desde) / 1000;
     const items = p.pistas.map((t, i) => {
-      const umbral = J.pistasSegundos[i] || 999999;
-      return seg >= umbral ? '<div class="pista"><small>Pista ' + (i + 1) + '</small>' + M.esc(t) + '</div>'
-                           : (i === 0 || seg >= (J.pistasSegundos[i - 1] || 0)) ? '<div class="pista espera"><small>Pista ' + (i + 1) + '</small>Disponible en ' + M.mmss(umbral - seg) + '</div>' : '';
+      const umbral = J.pistasSegundos[i] || 999999, oida = local[clave('pista-' + p.id + '-' + i)];
+      if (seg >= umbral) return '<div class="pista lista' + (oida ? ' oida' : '') + '"><button type="button" data-pista="' + M.esc(p.id) + ':' + i + '">'
+        + '<span class="pista-ico">' + (oida ? '↻' : '🔊') + '</span><span><small>Pista ' + (i + 1) + ' de ' + p.pistas.length + '</small>'
+        + (oida ? 'Escuchar de nuevo' : 'Escuchar la pista') + '</span></button>'
+        + (oida ? '<details><summary>Ver el texto</summary><p>' + M.esc(t) + '</p></details>' : '') + '</div>';
+      if (i === 0 || seg >= (J.pistasSegundos[i - 1] || 0)) return '<div class="pista espera"><small>Pista ' + (i + 1) + ' de ' + p.pistas.length + '</small>Disponible en ' + M.mmss(umbral - seg) + '</div>';
+      return '';
     }).join('');
-    return '<section class="pistas" id="pistas">' + items + '</section>';
+    return '<section class="pistas" id="pistas"><p class="sobretitulo" style="margin:0">Pistas del Guía · por voz</p>' + items + '</section>';
+  }
+  function decirPista(id, i) {
+    const p = (contenido(vista.est).pruebas || []).find(x => x.id === id); if (!p || !p.pistas[i]) return;
+    local[clave('pista-' + id + '-' + i)] = M.ahora(); guardarLocal();
+    M.audio(); M.SFX.paso();
+    M.decir('Pista ' + (i + 1) + '. ' + p.pistas[i]);
+    const ps = document.getElementById('pistas'); if (ps) ps.outerHTML = pistasHTML(p);
+  }
+
+  /* Anuncios del reloj (minutos 6, 10 y 11), como lo hace el Guía con el temporizador. */
+  const ANUNCIOS = [
+    [360, 'Minuto seis. Quedan seis minutos.'],
+    [600, 'Minuto diez. Quedan dos minutos.'],
+    [660, 'Minuto once. Queda un minuto. Preparen la validación.']
+  ];
+  function anunciar(estId, trans) {
+    if (M.leer('anuncios', true) === false) return;
+    ANUNCIOS.forEach(([s, txt], n) => {
+      const k = clave('anuncio-' + estId + '-' + n);
+      if (trans >= s && trans < s + 20 && !local[k]) { local[k] = 1; guardarLocal(); M.SFX.tic(); M.decir(txt); }
+    });
   }
 
   function vistaPrueba(c, p) {
@@ -338,6 +365,7 @@
         M.SFX.error(); M.decir('Tiempo cumplido. Tienen treinta segundos para validar y finalizar la estación.');
       }
       if (fin) { clearInterval(tick); tick = null; cerrarPorTiempo(); }
+      anunciar(x.id || vista.est, trans);
       const ps = document.getElementById('pistas');
       if (ps && Math.floor(trans) % 5 === 0) { const c = contenido(vista.est), p = c.pruebas[vista.tab]; if (p) ps.outerHTML = pistasHTML(p); }
     };
@@ -450,6 +478,8 @@
       + '<p class="suave" style="font-size:14px">Se elige automáticamente una voz masculina en español latinoamericano cuando el celular la tiene. Si suena una voz femenina, elijan otra de la lista (las marcadas con ♂ son masculinas).</p>'
       + '<p class="sobretitulo" style="margin-top:12px">Velocidad</p><div class="opciones-vel">'
       + [['normal', 'Normal'], ['agil', 'Ágil'], ['rapida', 'Rápida']].map(v => '<button data-vel="' + v[0] + '" class="' + (M.velocidad === v[0] ? 'sel' : '') + '">' + v[1] + '</button>').join('') + '</div>'
+      + '<p class="sobretitulo" style="margin-top:12px">Anuncios del reloj</p><p class="suave" style="font-size:13px;margin:0 0 8px">La consola avisa con voz los minutos 6, 10 y 11 de cada estación. Apáguenlos si el Guía los anuncia con el temporizador o desde El Gran Tablero.</p><div class="opciones-vel">'
+      + [[true, 'Encendidos'], [false, 'Apagados']].map(v => '<button data-anuncios="' + v[0] + '" class="' + (M.leer('anuncios', true) === v[0] ? 'sel' : '') + '">' + v[1] + '</button>').join('') + '</div>'
       + '<p class="sobretitulo" style="margin-top:12px">Voz</p><div class="lista-voces">' + (vs.length ? vs.map(v => '<button data-voz="' + M.esc(v.voiceURI) + '" class="' + (M.vozElegida && M.vozElegida.voiceURI === v.voiceURI ? 'sel' : '') + '">' + (M.esMasculina(v) ? '♂ ' : '') + M.esc(v.name) + '<small>' + M.esc(v.lang) + '</small></button>').join('') : '<p class="suave">Este navegador no tiene voces en español.</p>') + '</div>'
       + '<div class="acciones"><button class="btn primario" data-a="cerrarModal">LISTO</button></div></section></div>';
     app.insertAdjacentHTML('beforeend', html);
@@ -458,8 +488,12 @@
   /* ------------------------------------------------------------ eventos */
   app.addEventListener('submit', ev => { const f = ev.target.closest('[data-form]'); if (f) { ev.preventDefault(); validar(f.dataset.form); } });
   app.addEventListener('click', ev => {
+    const bp = ev.target.closest('[data-pista]');
+    if (bp) { const [id, i] = bp.dataset.pista.split(':'); return decirPista(id, +i); }
     const tab = ev.target.closest('[data-tab]');
     if (tab) { M.callar(); vista.tab = +tab.dataset.tab; pEstacion(); window.scrollTo(0, 0); const c = contenido(vista.est), p = c.pruebas[vista.tab]; if (p && !local[clave('oida-' + p.id)]) { local[clave('oida-' + p.id)] = 1; guardarLocal(); M.decir(textoTarjeta(c, p)); } return; }
+    const an = ev.target.closest('[data-anuncios]');
+    if (an) { M.guardar('anuncios', an.dataset.anuncios === 'true'); app.querySelectorAll('[data-anuncios]').forEach(x => x.classList.toggle('sel', x === an)); return; }
     const vel = ev.target.closest('[data-vel]');
     if (vel) { M.elegirVelocidad(vel.dataset.vel); app.querySelectorAll('[data-vel]').forEach(b => b.classList.toggle('sel', b === vel)); M.decir('Doctores, el reloj ya está corriendo.'); return; }
     const v = ev.target.closest('[data-voz]');
