@@ -26,7 +26,7 @@
     + '<p class="portada-intro">Un caso clínico en 5 estaciones y un cierre. Tu equipo de 7 llega a la línea de tiempo quirúrgica y cada decisión cuenta.</p>'
     + '</header>'
     + '<section class="portada-ruta">' + RUTA.map(r => '<div class="hud"><p class="sobretitulo">' + M.esc(r.momento) + '</p><b>' + M.esc(r.titulo) + '</b><span>' + M.esc(r.texto) + '</span></div>').join('') + '</section>'
-    + '<section class="portada-accesos">' + ACCESOS.map(a => '<a class="hud portada-tarjeta" href="' + a.href + '"><b>' + M.esc(a.titulo) + '</b><span>' + M.esc(a.texto) + '</span><em>' + a.boton + ' →</em></a>').join('') + '</section>'
+    + '<section class="portada-accesos">' + ACCESOS.map(a => '<a class="hud portada-tarjeta" href="' + a.href + '" target="_blank" rel="noopener"><b>' + M.esc(a.titulo) + '</b><span>' + M.esc(a.texto) + '</span><em>' + a.boton + ' →</em></a>').join('') + '</section>'
     + '<p class="suave centro" style="margin-top:24px;font-size:13px">Metodología y diseño del juego: Nathalia Velasco · Simoné</p>'
     + '</main>';
 })();
