@@ -318,13 +318,21 @@
       + '<div class="acciones"><button class="btn primario ancho" id="verGrupos">VER LOS 4 GRUPOS Y SUS INTEGRANTES →</button></div></section>'
       + '<section class="hud bloque"><p class="sobretitulo">Tripulación · ' + M.esc(g.nombre) + '</p><div id="anuncio-completo"></div><ul class="lista-tripulacion" id="trip"><li class="vacio">Cargando…</li></ul></section>'
       + '<div class="acciones"><a class="btn primario ancho grande" href="' + M.esc(M.urlDe('sala.html', { grupo: registro.grupo })) + '">INGRESA A LA SALA DE ESCAPE →</a></div>'
-      + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button></div>'
+      + '<div class="acciones"><button class="btn fantasma pequeno" id="cambiar">Corregir mi registro</button>'
+      + '<button class="btn contorno pequeno" id="nuevoRegistro">NUEVO REGISTRO</button>'
+      + '<a class="btn fantasma pequeno" href="index.html">VOLVER AL INICIO</a></div>'
       + '</main>');
     document.getElementById('verGrupos').onclick = () => { clearInterval(sondeo); pGrupos(); };
     document.getElementById('cambiar').onclick = async () => {
       clearInterval(sondeo);
       try { grupos = (await M.rpc('mdt_acceso', { p_codigo: codigo })).grupos || {}; } catch (e) {}
       sel = { grupo: registro.grupo, rol: registro.rol }; borrador = { nombre: registro.nombre, profesion: registro.profesion || '', autoriza: false };
+      pFormulario();
+    };
+    document.getElementById('nuevoRegistro').onclick = async () => {
+      clearInterval(sondeo);
+      registro = null; M.guardar('registro', null); sel = { grupo: '', rol: '' }; borrador = { nombre: '', profesion: '', autoriza: false };
+      try { grupos = (await M.rpc('mdt_acceso', { p_codigo: codigo })).grupos || {}; } catch (e) {}
       pFormulario();
     };
     tripulacion(); clearInterval(sondeo); sondeo = setInterval(tripulacion, 5000);
